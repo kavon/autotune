@@ -12,26 +12,15 @@ from opentuner import IntegerParameter
 from opentuner import MeasurementInterface
 from opentuner import Result
 
-GCC_FLAGS = [
-  'align-functions', 'align-jumps', 'align-labels',
-  'align-loops', 'asynchronous-unwind-tables',
-  'branch-count-reg', 'branch-probabilities',
-  # ... (176 total)
-]
+import opt_data
 
-# (name, min, max)
-GCC_PARAMS = [
-  # ('early-inlining-insns', 0, 1000),
-  # ('gcse-cost-distance-ratio', 0, 100),
-  # ('iv-max-considered-uses', 0, 1000),
-  # ... (145 total)
-]
+PASSES = opt_data.OPT_PASSES
 
 
-class GccFlagsTuner(MeasurementInterface):
+class OptFlagsTuner(MeasurementInterface):
     
   def __init__(self, *pargs, **kwargs):
-    super(GccFlagsTuner, self).__init__(program_name="raytracer", *pargs,
+    super(OptFlagsTuner, self).__init__(program_name="raytracer", *pargs,
                                         **kwargs)
     self.parallel_compile = True                                  
 
@@ -41,16 +30,18 @@ class GccFlagsTuner(MeasurementInterface):
     ConfigurationManipulator
     """
     manipulator = ConfigurationManipulator()
-    manipulator.add_parameter(
-      IntegerParameter('opt_level', 0, 3))
-    for flag in GCC_FLAGS:
+    # manipulator.add_parameter(
+    #   IntegerParameter('opt_level', 0, 3))
+    for opt_pass in PASSES:
       manipulator.add_parameter(
-        EnumParameter(flag,
-                      ['on', 'off', 'default']))
-    for param, min, max in GCC_PARAMS:
-      manipulator.add_parameter(
-        IntegerParameter(param, min, max))
+        BooleanParameter(opt_pass))
+    # for param, min, max in GCC_PARAMS:
+    #   manipulator.add_parameter(
+    #     IntegerParameter(param, min, max))
     return manipulator
+
+  def generate_bc(self):
+      cmd = ''
 
   def compile(self, cfg, id):
     """
@@ -58,14 +49,15 @@ class GccFlagsTuner(MeasurementInterface):
     """
     gcc_cmd = 'g++-mp-6 apps/raytracer.cpp -o ./tmp{0}.bin'.format(id)
     gcc_cmd += ' -O{0}'.format(cfg['opt_level'])
-    for flag in GCC_FLAGS:
-      if cfg[flag] == 'on':
-        gcc_cmd += ' -f{0}'.format(flag)
-      elif cfg[flag] == 'off':
-        gcc_cmd += ' -fno-{0}'.format(flag)
-    for param, min, max in GCC_PARAMS:
-      gcc_cmd += ' --param {0}={1}'.format(
-        param, cfg[param])
+    
+    for opt_pass in PASSES:
+      if cfg[flag]:
+          passes += ' -{0}'.format(opt_pass)
+          
+      
+    # for param, min, max in GCC_PARAMS:
+    #   gcc_cmd += ' --param {0}={1}'.format(
+    #     param, cfg[param])
     print gcc_cmd
     return self.call_program(gcc_cmd)
   
@@ -92,6 +84,10 @@ class GccFlagsTuner(MeasurementInterface):
     compile_result = self.compile(cfg, 0)
     return self.run_precompiled(desired_result, input, limit, compile_result, 0)
 
+def generate_bc():
+    
+
 if __name__ == '__main__':
   argparser = opentuner.default_argparser()
-  GccFlagsTuner.main(argparser.parse_args())
+  OptFlagsTuner.generate_bc()
+  OptFlagsTuner.main(argparser.parse_args())
