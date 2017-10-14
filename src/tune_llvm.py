@@ -19,12 +19,13 @@ import opt_data
 PATH = '/Users/kavon/msr/llvm5/bin/'
 DEBUG = False
 OPT_LVL = '-O3'
+PROG = 'tsp-ga'
 
 
 class OptFlagsTuner(MeasurementInterface):
     
   def __init__(self, *pargs, **kwargs):
-    super(OptFlagsTuner, self).__init__(program_name="raytracer", *pargs,
+    super(OptFlagsTuner, self).__init__(program_name=PROG, *pargs,
                                         **kwargs)
     self.parallel_compile = True
     
@@ -84,7 +85,7 @@ class OptFlagsTuner(MeasurementInterface):
     
     passes = self.build_passes(cfg)
     
-    opt_outfile = './out/raytracer_opt{0}.bc'.format(id)
+    opt_outfile = './out/' + PROG + '_opt{0}.bc'.format(id)
     bin_outfile = './out/tmp{0}.bin'.format(id)
     
     build_res = None
@@ -94,7 +95,7 @@ class OptFlagsTuner(MeasurementInterface):
     build_cmd = '(no build cmd)'
     try:
         # optimize
-        opt_cmd = (PATH + 'opt ' + passes + ' ./src/apps/raytracer.bc -o '
+        opt_cmd = (PATH + 'opt ' + passes + ' ./src/apps/' + PROG + '.bc -o '
                 + opt_outfile)
         if DEBUG:
             print opt_cmd, '\n'
@@ -157,8 +158,10 @@ class OptFlagsTuner(MeasurementInterface):
     # outfile = 'passes_final.json'
     # print "Optimal passes written to " + outfile + ":", configuration.data
     # self.manipulator().save_to_file(configuration.data, outfile)
-    print "best pass ordering, given priority " + OPT_LVL + " is:"
-    print self.build_passes(configuration.data)
+    msg = "Tuned on program {0}, with priority {1}. \nBest pass ordering found:\n{2}".format(
+            PROG, OPT_LVL, self.build_passes(configuration.data))
+    print msg
+    
 
 
 if __name__ == '__main__':

@@ -7,8 +7,10 @@ def genOptLevels():
     phase_structure1 = [
                             ('simp1', SIMPLIFY),
                             ('simp2', SIMPLIFY),
+                            ('simp3', SIMPLIFY),
                             ('expand1', EXPAND),
-                            ('expand2', EXPAND)
+                            ('expand2', EXPAND),
+                            ('expand3', EXPAND)
                        ]
     
     opt_levels['-O0'] = (genCombineTimes(2, 1),     # objective function
