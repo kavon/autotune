@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 #
-# Autotune flags to g++ to optimize the performance of apps/raytracer.cpp
-#
-# This is an extremely simplified version meant only for tutorials
+# Autotune opt passes.
 #
 
 import opentuner
@@ -11,6 +9,8 @@ from opentuner import EnumParameter
 from opentuner import IntegerParameter
 from opentuner import MeasurementInterface
 from opentuner import Result
+from opentuner.search.manipulator import (ConfigurationManipulator,
+                                          PermutationParameter)
 
 import opt_data
 
@@ -24,7 +24,10 @@ class OptFlagsTuner(MeasurementInterface):
   def __init__(self, *pargs, **kwargs):
     super(OptFlagsTuner, self).__init__(program_name="raytracer", *pargs,
                                         **kwargs)
-    self.parallel_compile = True                                  
+    self.parallel_compile = True  
+    
+    # private
+    self.passes_dict = {}                                
 
   def manipulator(self):
     """
@@ -32,26 +35,36 @@ class OptFlagsTuner(MeasurementInterface):
     ConfigurationManipulator
     """
     manipulator = ConfigurationManipulator()
-    # manipulator.add_parameter(
-    #   IntegerParameter('opt_level', 0, 3))
-    for opt_pass in PASSES:
+    
+    for pass_id, opt_pass in enumerate(PASSES):
+      # whether to enable the pass
       manipulator.add_parameter(
         EnumParameter(opt_pass, [True, False]))
-    # for param, min, max in GCC_PARAMS:
-    #   manipulator.add_parameter(
-    #     IntegerParameter(param, min, max))
+      # record the ID in the passes_dict
+      self.passes_dict[pass_id] = opt_pass
+    
+    # also consider the order of the passes. each
+    # pass has a unique ID which is its position in the PASSES list.
+    manipulator.add_parameter(PermutationParameter('pass_order', range(len(PASSES))))
+    
     return manipulator
+
+  def build_passes(self, cfg):
+      order = cfg['pass_order']
+      passes = ''
+      for pass_id in order:
+        opt_pass = self.passes_dict[pass_id]
+        if cfg[opt_pass]:
+            passes += ' -{0}'.format(opt_pass)
+      
+      return passes
 
   def compile(self, cfg, id):
     """
     Compile a given configuration in parallel
     """
     
-    # run opt using the current config
-    passes = ''
-    for opt_pass in PASSES:
-      if cfg[opt_pass]:
-          passes += ' -{0}'.format(opt_pass)
+    passes = self.build_passes(cfg)
     
     opt_result = './apps/raytracer_opt{0}.bc'.format(id)
     bin_result = './tmp{0}.bin'.format(id)
@@ -72,18 +85,7 @@ class OptFlagsTuner(MeasurementInterface):
     
     assert build_res != None
     return build_res
-    
-    
-    # gcc_cmd = 'clang++ apps/raytracer.bc -o apps/raytracer.cpp -o ./tmp{0}.bin'.format(id)
-    # gcc_cmd += ' -O{0}'.format(cfg['opt_level'])
-    
-          
-      
-    # for param, min, max in GCC_PARAMS:
-    #   gcc_cmd += ' --param {0}={1}'.format(
-    #     param, cfg[param])
-    # print opt_cmd
-    # return self.call_program(gcc_cmd)
+
   
   def run_precompiled(self, desired_result, input, limit, compile_result, id):
     """
@@ -114,6 +116,8 @@ class OptFlagsTuner(MeasurementInterface):
     outfile = 'passes_final.json'
     print "Optimal passes written to " + outfile + ":", configuration.data
     self.manipulator().save_to_file(configuration.data, outfile)
+    print "best pass ordering is:"
+    print self.build_passes(configuration.data)
 
 if __name__ == '__main__':
   argparser = opentuner.default_argparser()

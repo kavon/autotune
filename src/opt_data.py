@@ -4,6 +4,7 @@
 # example:
 # opt -mem2reg -instsimplify -lcssa -licm -loop-sink -instcombine
 
+# for now, a very conservative list because some of the below cause opt to crash
 OPT_PASSES = [
 'mem2reg',
 'instsimplify',
@@ -12,7 +13,10 @@ OPT_PASSES = [
 'simplifycfg',
 'inline',
 'instcombine',
-'sink'
+'sink',
+'jump-threading',
+'sroa',
+'adce'
 ]
 
 
