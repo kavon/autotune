@@ -25,7 +25,6 @@ class OptFlagsTuner(MeasurementInterface):
     super(OptFlagsTuner, self).__init__(program_name="raytracer", *pargs,
                                         **kwargs)
     self.parallel_compile = True
-    self.parallel_run = True
     
     # private
     self.passes_dict = {}                                
@@ -72,11 +71,14 @@ class OptFlagsTuner(MeasurementInterface):
     
     build_res = None
     opt_res = None
+    run_res = None
+    opt_cmd = '(no opt cmd)'
+    build_cmd = '(no build cmd)'
     try:
         # optimize
         opt_cmd = (PATH + 'opt ' + passes + ' ./src/apps/raytracer.bc -o '
                 + opt_outfile)
-        print opt_cmd
+        print opt_cmd, '\n'
         opt_res = self.call_program(opt_cmd)
         assert opt_res['returncode'] == 0
         
@@ -88,14 +90,19 @@ class OptFlagsTuner(MeasurementInterface):
         # run
         run_res = self.call_program(bin_outfile)
         assert run_res['returncode'] == 0
+    
+    except:
+        # ensure we made it all the way through
+        print ("\n\nCRASHED IN THE FOLLOWING CONFIG:\nopt command: " + opt_cmd + "\nbuild command: " + build_cmd) 
+        assert opt_res != None
+        assert build_res != None
+        assert run_res != None
+        assert False, "Something went wrong!"
         
     finally:
         self.call_program('rm -f ' + opt_outfile + ' ' + bin_outfile)
     
-    # ensure we made it all the way through
-    assert opt_res != None
-    assert build_res != None
-    assert run_res != None
+    
     
     # apply weighting
     opt_time = opt_res['time']
