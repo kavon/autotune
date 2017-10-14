@@ -24,7 +24,8 @@ class OptFlagsTuner(MeasurementInterface):
   def __init__(self, *pargs, **kwargs):
     super(OptFlagsTuner, self).__init__(program_name="raytracer", *pargs,
                                         **kwargs)
-    self.parallel_compile = True  
+    self.parallel_compile = True
+    self.parallel_run = True
     
     # private
     self.passes_dict = {}                                
@@ -66,40 +67,53 @@ class OptFlagsTuner(MeasurementInterface):
     
     passes = self.build_passes(cfg)
     
-    opt_result = './apps/raytracer_opt{0}.bc'.format(id)
-    bin_result = './tmp{0}.bin'.format(id)
+    opt_outfile = './out/raytracer_opt{0}.bc'.format(id)
+    bin_outfile = './out/tmp{0}.bin'.format(id)
     
     build_res = None
+    opt_res = None
     try:
-        opt_cmd = (PATH + 'opt ' + passes + ' ./apps/raytracer.bc -o '
-                + opt_result)
+        # optimize
+        opt_cmd = (PATH + 'opt ' + passes + ' ./src/apps/raytracer.bc -o '
+                + opt_outfile)
         print opt_cmd
         opt_res = self.call_program(opt_cmd)
         assert opt_res['returncode'] == 0
         
-        build_cmd = (PATH + 'clang++ ' + opt_result + ' -o ' + bin_result)
-        print build_cmd
+        # build executable
+        build_cmd = (PATH + 'clang++ ' + opt_outfile + ' -o ' + bin_outfile)
         build_res = self.call_program(build_cmd)
+        assert build_res['returncode'] == 0
+        
+        # run
+        run_res = self.call_program(bin_outfile)
+        assert run_res['returncode'] == 0
+        
     finally:
-        self.call_program('rm -f ' + opt_result)
+        self.call_program('rm -f ' + opt_outfile + ' ' + bin_outfile)
     
+    # ensure we made it all the way through
+    assert opt_res != None
     assert build_res != None
-    return build_res
+    assert run_res != None
+    
+    # apply weighting
+    opt_time = opt_res['time']
+    run_time = run_res['time']
+    
+    total_time = (0.5 * opt_time) + run_time
+    
+    run_res['time'] = total_time
+    
+    return run_res
 
   
   def run_precompiled(self, desired_result, input, limit, compile_result, id):
-    """
-    Run a compile_result from compile() sequentially and return performance
-    """
-    assert compile_result['returncode'] == 0
-
-    try:    
-        run_result = self.call_program('./tmp{0}.bin'.format(id))
-        assert run_result['returncode'] == 0
-    finally:
-        self.call_program('rm ./tmp{0}.bin'.format(id))
-
-    return Result(time=run_result['time'])
+    '''
+    the compile_result is what is returned by compile
+    '''
+    
+    return Result(time=compile_result['time'])
 
   def compile_and_run(self, desired_result, input, limit):
     """
