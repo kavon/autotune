@@ -11,12 +11,14 @@ from opentuner import MeasurementInterface
 from opentuner import Result
 from opentuner.search.manipulator import (ConfigurationManipulator,
                                           PermutationParameter)
+from opentuner.search.objective import SearchObjective
 
 import opt_data
 
 # have to use one consistent clang/opt/llc build
 PATH = '/Users/kavon/msr/llvm5/bin/'
 DEBUG = False
+OPT_LVL = '-O0'
 
 
 class OptFlagsTuner(MeasurementInterface):
@@ -26,20 +28,11 @@ class OptFlagsTuner(MeasurementInterface):
                                         **kwargs)
     self.parallel_compile = True
     
-    # private
-    phases = [
-        ('simp1', opt_data.SIMPLIFY[:]),
-        ('simp2', opt_data.SIMPLIFY[:]),
-        ('expand1', opt_data.EXPAND[:]),
-        ('expand2', opt_data.EXPAND[:])
-    ]
-    
-    phaseMap = {}
-    for name, passes in phases:
-        phaseMap[name] = passes
+    self.problem_setup = opt_data.genOptLevels()[OPT_LVL]
+    phase_structure = self.problem_setup[1]
         
-    self.phases = [name for name, _ in phases]
-    self.phaseMap = phaseMap
+    self.phaseSet = set([name for name, _ in phase_structure])
+    
 
   def manipulator(self):
     """
@@ -48,37 +41,39 @@ class OptFlagsTuner(MeasurementInterface):
     """
     manipulator = ConfigurationManipulator()
     
-    # pass groups (phases) and misc passes can be reordered relative to eachother
-    allGroups = opt_data.MISC[:]
-    allGroups.extend(self.phases)
-    manipulator.add_parameter(PermutationParameter('phases', allGroups))
+    misc_passes = self.problem_setup[2]
+    phases = list(self.phaseSet)
     
-    # passes within each phase can be permuted
-    for name in self.phases:
-        manipulator.add_parameter(PermutationParameter(name, self.phaseMap[name]))
-        
-    # the built-in pass orderings in opt should also be considered
-    # level 0 corresponds to using the passes searched for manually
-    # manipulator.add_parameter(
-    #   IntegerParameter('opt_level', 0, 3))
+    # reordering top-level phases/passes affects time
+    phases.extend(misc_passes)
+    manipulator.add_parameter(PermutationParameter('phases', phases))
+    
+    # in addition, reducing the number of top-level phases/passes can help
+    manipulator.add_parameter(IntegerParameter('len_phases', 0, len(phases)))
+    
+    # then, passes within a phase can be permuted and/or dropped
+    phase_structure = self.problem_setup[1]
+    for name, passes in phase_structure:
+        manipulator.add_parameter(PermutationParameter(name, passes))
+        manipulator.add_parameter(IntegerParameter('len_' + name, 0, len(passes)))
     
     return manipulator
 
   def build_passes(self, cfg):
-    
-    # opt_level = cfg['opt_level']
-    # if opt_level > 0:
-    #     return '-O' + str(opt_level)
-      
-    order = cfg['phases']
     passes = ''
-    for phase in order:
-      if phase in self.phaseMap:
-        subOrder = cfg[phase]
-        asFlags = [' -{0}'.format(p) for p in subOrder]
+    
+    allTopLevel = cfg['phases']
+    lenTop = cfg['len_phases']
+    topLevel = allTopLevel[:lenTop]
+    
+    for item in topLevel:
+      if item in self.phaseSet:
+        subOrder = cfg[item]
+        subLen = cfg['len_' + item]
+        asFlags = [' -{0}'.format(p) for p in subOrder[:subLen]]
         passes += ''.join(asFlags)
       else:
-        passes += ' -{0}'.format(phase)
+        passes += ' -{0}'.format(item)
     
     return passes
 
@@ -128,12 +123,13 @@ class OptFlagsTuner(MeasurementInterface):
     
     
     
-    # apply weighting
-    opt_time = opt_res['time']
+    # apply the objective function
+    objective = self.problem_setup[0]
+    compile_time = opt_res['time']
     run_time = run_res['time']
     
-    total_time = (0.5 * opt_time) + run_time
-    
+    total_time = objective(compile_time, run_time)
+
     run_res['time'] = total_time
     
     return run_res
@@ -158,11 +154,12 @@ class OptFlagsTuner(MeasurementInterface):
     
   def save_final_config(self, configuration):
     """called at the end of tuning"""
-    outfile = 'passes_final.json'
-    print "Optimal passes written to " + outfile + ":", configuration.data
-    self.manipulator().save_to_file(configuration.data, outfile)
-    print "best pass ordering is:"
+    # outfile = 'passes_final.json'
+    # print "Optimal passes written to " + outfile + ":", configuration.data
+    # self.manipulator().save_to_file(configuration.data, outfile)
+    print "best pass ordering, given priority " + OPT_LVL + " is:"
     print self.build_passes(configuration.data)
+
 
 if __name__ == '__main__':
   argparser = opentuner.default_argparser()
