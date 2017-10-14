@@ -50,24 +50,19 @@ SIMPLIFY = [
     'instcombine',
     'dse',
     'simplifycfg',
-    'early-cse'
-]
-
-FOLD = [
-    'instcombine'
+    'early-cse',
+    'latesimplifycfg'
 ]
 
 EXPAND = [
-    'inline'
+    'inline',
+    'loops -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm'
 ]
 
 MISC = [
-    'mem2reg',
     'tailcallelim',
     'jump-threading',
-    'inferattrs',
     'sroa',
-    'lcssa',
     'sink',
     'bdce',
     'early-cse-memssa',
@@ -76,5 +71,26 @@ MISC = [
     'ipconstprop',
     'globaldce',
     'instsimplify',
-    'reassociate'
+    'reassociate',
+    'correlated-propagation',
+    'memcpyopt',
+    'branch-prob',
+    'block-freq',
+    'loop-sink'
+]
+
+
+# Help reduce the search space by pinning passes
+
+ALWAYS_FIRST = [
+    # '-targetlibinfo',
+    # '-tti',
+    # '-targetpassconfig',
+    # '-tbaa',
+    # '-scoped-noalias',
+    # '-assumption-cache-tracker',
+    # '-profile-summary-info',
+    '-forceattrs',
+    '-inferattrs',
+    '-mem2reg'
 ]

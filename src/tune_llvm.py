@@ -60,7 +60,7 @@ class OptFlagsTuner(MeasurementInterface):
     return manipulator
 
   def build_passes(self, cfg):
-    passes = ''
+    passes = ' '.join(opt_data.ALWAYS_FIRST)
     
     allTopLevel = cfg['phases']
     lenTop = cfg['len_phases']
