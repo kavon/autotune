@@ -18,7 +18,7 @@ import opt_data
 # have to use one consistent clang/opt/llc build
 PATH = '/Users/kavon/msr/llvm5/bin/'
 DEBUG = False
-OPT_LVL = '-O0'
+OPT_LVL = '-O3'
 
 
 class OptFlagsTuner(MeasurementInterface):

@@ -16,17 +16,17 @@ def genOptLevels():
                          MISC                       # individual passes that can be interleaved between phases
                         )
                         
-    opt_levels['-O1'] = (genCombineTimes(1, 1),
+    opt_levels['-O1'] = (genCombineTimes(1, 3),
                          phase_structure1,
                          MISC
                         )
                         
-    opt_levels['-O2'] = (genCombineTimes(1, 2),
+    opt_levels['-O2'] = (genCombineTimes(1, 7),
                          phase_structure1,
                          MISC
                         )
                         
-    opt_levels['-O3'] = (genCombineTimes(1, 3),
+    opt_levels['-O3'] = (genCombineTimes(1, 10),
                          phase_structure1,
                          MISC
                         )
@@ -49,7 +49,8 @@ def genCombineTimes(compileW, runtimeW):
 SIMPLIFY = [
     'instcombine',
     'dse',
-    'simplifycfg'
+    'simplifycfg',
+    'early-cse'
 ]
 
 FOLD = [
