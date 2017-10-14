@@ -1,4 +1,46 @@
 
+# all passes that help simplify/shrink the program in some way
+SIMPLIFY = [
+    'instcombine',
+    'dse',
+    'simplifycfg'
+]
+
+FOLD = [
+    'instcombine'
+]
+
+EXPAND = [
+    'inline'
+]
+
+MISC = [
+    'mem2reg',
+    'tailcallelim',
+    'jump-threading',
+    'inferattrs',
+    'sroa',
+    'lcssa',
+    'sink',
+    'bdce',
+    'early-cse-memssa',
+    'adce',
+    'gvn',
+    'ipconstprop',
+    'globaldce',
+    'instsimplify',
+    'reassociate'
+]
+
+
+
+
+
+
+
+
+
+
 # these are individial transform/analysis passes that opt can run.
 # order matters, and you can run any of these more than once.
 # example:

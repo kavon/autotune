@@ -6,7 +6,7 @@ discovers good LLVM passes for GHC
 Here's an example:
 
 ```
-./src/tune_llvm.py --no-dups --stop-after=30 --parallelism 8
+./src/tune_llvm.py --no-dups --display-frequency=5 --parallelism 6 --stop-after=60
 ```
 
 Run `./src/tune_llvm.py -h` for more options.

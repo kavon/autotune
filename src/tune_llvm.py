@@ -16,7 +16,7 @@ import opt_data
 
 # have to use one consistent clang/opt/llc build
 PATH = '/Users/kavon/msr/llvm5/bin/'
-PASSES = opt_data.OPT_PASSES
+DEBUG = False
 
 
 class OptFlagsTuner(MeasurementInterface):
@@ -27,7 +27,19 @@ class OptFlagsTuner(MeasurementInterface):
     self.parallel_compile = True
     
     # private
-    self.passes_dict = {}                                
+    phases = [
+        ('simp1', opt_data.SIMPLIFY[:]),
+        ('simp2', opt_data.SIMPLIFY[:]),
+        ('expand1', opt_data.EXPAND[:]),
+        ('expand2', opt_data.EXPAND[:])
+    ]
+    
+    phaseMap = {}
+    for name, passes in phases:
+        phaseMap[name] = passes
+        
+    self.phases = [name for name, _ in phases]
+    self.phaseMap = phaseMap
 
   def manipulator(self):
     """
@@ -36,28 +48,39 @@ class OptFlagsTuner(MeasurementInterface):
     """
     manipulator = ConfigurationManipulator()
     
-    for pass_id, opt_pass in enumerate(PASSES):
-      # whether to enable the pass
-      manipulator.add_parameter(
-        EnumParameter(opt_pass, [True, False]))
-      # record the ID in the passes_dict
-      self.passes_dict[pass_id] = opt_pass
+    # pass groups (phases) and misc passes can be reordered relative to eachother
+    allGroups = opt_data.MISC[:]
+    allGroups.extend(self.phases)
+    manipulator.add_parameter(PermutationParameter('phases', allGroups))
     
-    # also consider the order of the passes. each
-    # pass has a unique ID which is its position in the PASSES list.
-    manipulator.add_parameter(PermutationParameter('pass_order', range(len(PASSES))))
+    # passes within each phase can be permuted
+    for name in self.phases:
+        manipulator.add_parameter(PermutationParameter(name, self.phaseMap[name]))
+        
+    # the built-in pass orderings in opt should also be considered
+    # level 0 corresponds to using the passes searched for manually
+    # manipulator.add_parameter(
+    #   IntegerParameter('opt_level', 0, 3))
     
     return manipulator
 
   def build_passes(self, cfg):
-      order = cfg['pass_order']
-      passes = ''
-      for pass_id in order:
-        opt_pass = self.passes_dict[pass_id]
-        if cfg[opt_pass]:
-            passes += ' -{0}'.format(opt_pass)
+    
+    # opt_level = cfg['opt_level']
+    # if opt_level > 0:
+    #     return '-O' + str(opt_level)
       
-      return passes
+    order = cfg['phases']
+    passes = ''
+    for phase in order:
+      if phase in self.phaseMap:
+        subOrder = cfg[phase]
+        asFlags = [' -{0}'.format(p) for p in subOrder]
+        passes += ''.join(asFlags)
+      else:
+        passes += ' -{0}'.format(phase)
+    
+    return passes
 
   def compile(self, cfg, id):
     """
@@ -78,7 +101,8 @@ class OptFlagsTuner(MeasurementInterface):
         # optimize
         opt_cmd = (PATH + 'opt ' + passes + ' ./src/apps/raytracer.bc -o '
                 + opt_outfile)
-        print opt_cmd, '\n'
+        if DEBUG:
+            print opt_cmd, '\n'
         opt_res = self.call_program(opt_cmd)
         assert opt_res['returncode'] == 0
         
