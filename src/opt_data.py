@@ -111,7 +111,14 @@ MISC = [
     'slsr',
     'speculative-execution',
     'sroa',
-    'structurizecfg',
+    
+    # structureizecfg breaks invokes in tsp-ga:
+#     Block containing LandingPadInst must be jumped to only by the unwind edge of an invoke.
+#   %300 = landingpad { i8*, i32 }
+#           catch i8* null
+# LLVM ERROR: Broken function found, compilation aborted!
+    # 'structurizecfg',
+    
     'tailcallelim'
 ]
 
