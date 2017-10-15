@@ -58,28 +58,68 @@ SIMPLIFY = [
 
 EXPAND = [
     'inline',
-    'loops -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll -instcombine -loop-simplify -lcssa-verification -lcssa -scalar-evolution -licm'
+    # a sequence that tries to unroll loops
+    'loops -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll'
 ]
 
+# passes that are commented out below were suspected of causing opt to crash.
 MISC = [
-    'tailcallelim',
-    'jump-threading',
-    'sroa',
-    'sink',
-    'bdce',
-    'early-cse-memssa',
     'adce',
-    'gvn',
-    'ipconstprop',
-    'globaldce',
-    'instsimplify',
-    'reassociate',
-    'correlated-propagation',
-    'memcpyopt',
-    'branch-prob',
+    'bdce',
     'block-freq',
-    'loop-sink'
+    'branch-prob',
+    'consthoist',
+    'constmerge',
+    'constprop',
+    'correlated-propagation',
+    'early-cse-memssa',
+    'globaldce',
+    
+    # one of these gvns is causing a segfault in opt
+    # 'gvn-hoist',
+    # 'gvn-sink',
+    
+    'gvn',
+    'instsimplify',
+    'ipconstprop',
+    'jump-threading',
+    'lcssa',
+    'load-store-vectorizer',
+    
+    # this causes opt to crash
+    # 'localizer',
+    
+    'loop-interchange',
+    'loop-load-elim',
+    'loop-reduce',
+    'loop-sink',
+    'loop-unswitch',
+    'memcpyopt',
+    'mergefunc',
+    'mergereturn',
+    'mldst-motion',
+    'nary-reassociate',
+    'newgvn',
+    'partial-inliner',
+    'partially-inline-libcalls',
+    'reassociate',
+    'sccp',
+    'separate-const-offset-from-gep',
+    'simple-loop-unswitch',
+    'sink',
+    'slp-vectorizer',
+    'slsr',
+    'speculative-execution',
+    'sroa',
+    'structurizecfg',
+    'tailcallelim'
 ]
+
+# other interesting options
+'''
+- A textual description of the alias analysis pipeline for handling managed aliasing queries
+    -aa-pipeline=<string>        
+'''
 
 
 # Help reduce the search space by pinning passes
