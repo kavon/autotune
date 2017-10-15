@@ -1,5 +1,13 @@
 # autotune
-discovers good LLVM passes for GHC
+A program that discovers good LLVM passes for GHC. Based on OpenTuner.
+
+**NOTE** This repository is still early on in development, so it does not *yet* optimize Haskell programs. Eventually I will structure this tuner so it works for any compiler that uses LLVM.
+
+## setup
+
+1. Install [OpenTuner](http://opentuner.org/tutorial/setup/).
+2. Download/Install LLVM 5
+3. 
 
 ## how to use
 
