@@ -35,15 +35,32 @@ def genOptLevels():
     return opt_levels
 
 
-def genCombineTimes(compileW, runtimeW):
-    # we use De Jong's spherical function as our objective function, with a tweak
-    # to support weighting. Higher weight means that dimension is more important to
-    # minimize.
-    def combineTimes(compT, runT):
+def genCombineTimes(compileW, runtimeW, kind='sphere'):
+    # Higher weight means that dimension is more important to minimize.
+    
+    # De Jong's spherical objective function, with tweaks.
+    def spherical(compT, runT):
+        compT += 1.0
+        runT += 1.0
         return ((compileW * (compT ** 2))
                 + (runtimeW * (runT ** 2)))
     
-    return combineTimes
+    def linear(compT, runT):
+        compT += 1.0
+        runT += 1.0
+        return ((compileW * compT)
+                + (runtimeW * runT))
+    
+    switch = {
+        'sphere' : spherical,
+        'linear' : linear
+    }
+    
+    assert kind in switch, "wrong objective function kind"
+    
+    return switch[kind]
+    
+    
 
 
 # pass groups
@@ -52,8 +69,7 @@ SIMPLIFY = [
     'instcombine',
     'dse',
     'simplifycfg',
-    'early-cse',
-    'latesimplifycfg'
+    'early-cse'
 ]
 
 EXPAND = [
@@ -83,6 +99,7 @@ MISC = [
     'instsimplify',
     'ipconstprop',
     'jump-threading',
+    'latesimplifycfg',
     'lcssa',
     'load-store-vectorizer',
     
