@@ -19,7 +19,7 @@ def genOptLevels():
                          150
                         )
                         
-    opt_levels['-O3'] = (genCombineTimes(1, 10),
+    opt_levels['-O3'] = (genCombineTimes(1, 10, 'runOnly'),
                          ALL_PASSES,
                          150
                         )
@@ -41,10 +41,15 @@ def genCombineTimes(compileW, runtimeW, kind='sphere'):
         runT += 1.0
         return ((compileW * compT)
                 + (runtimeW * runT))
+                
+    def runOnly(_, runT):
+        runT += 1.0
+        return (runT ** 2)
     
     switch = {
         'sphere' : spherical,
-        'linear' : linear
+        'linear' : linear,
+        'runOnly' : runOnly
     }
     
     assert kind in switch, "wrong objective function kind"
