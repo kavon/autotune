@@ -4,36 +4,24 @@
 def genOptLevels():
     opt_levels = {}
     
-    phase_structure1 = [
-                            ('simp1', SIMPLIFY),
-                            ('simp2', SIMPLIFY),
-                            ('simp3', SIMPLIFY),
-                            ('expand1', EXPAND),
-                            ('expand2', EXPAND),
-                            ('expand3', EXPAND),
-                            ('anal1', ANALYSIS),
-                            ('anal2', ANALYSIS),
-                            ('anal3', ANALYSIS)
-                       ]
-    
     opt_levels['-O0'] = (genCombineTimes(2, 1),     # objective function
-                         phase_structure1,          # loose phase structure
-                         MISC                       # individual passes that can be interleaved between phases
+                         ALL_PASSES,                # passes to be considered
+                         150                        # max passes applied to prog
                         )
                         
-    opt_levels['-O1'] = (genCombineTimes(1, 3),
-                         phase_structure1,
-                         MISC
+    opt_levels['-O1'] = (genCombineTimes(1, 2),
+                         ALL_PASSES,
+                         150
                         )
                         
     opt_levels['-O2'] = (genCombineTimes(1, 7),
-                         phase_structure1,
-                         MISC
+                         ALL_PASSES,
+                         150
                         )
                         
     opt_levels['-O3'] = (genCombineTimes(1, 10),
-                         phase_structure1,
-                         MISC
+                         ALL_PASSES,
+                         150
                         )
     return opt_levels
 
@@ -63,99 +51,99 @@ def genCombineTimes(compileW, runtimeW, kind='sphere'):
     
     return switch[kind]
     
-    
+ 
+# one of these gvns is causing a segfault in opt
+# 'gvn-hoist',
+# 'gvn-sink',
 
+# this causes opt to crash
+# 'localizer',
 
-# pass groups
+# crashes
+# 'loop-interchange',
 
-SIMPLIFY = [
-    'instcombine',
-    'simplifycfg',
-    'early-cse'
-]
-
-EXPAND = [
-    'basiccg -inline',
-    # a sequence that tries to unroll loops
-    'loops -loop-simplify -lcssa -scalar-evolution -loop-unroll'
-]
-
-# passes that are commented out below were suspected of causing opt to crash.
-MISC = [
-    'adce',
-    'bdce',
-    'constmerge',
-    'constprop',
-    'correlated-propagation',
-    'deadargelim',
-    'die',
-    'dse',
-    # 'early-cse-memssa',
-    'elim-avail-extern',
-    'float2int',
-    'strip-dead-prototypes -globaldce',
-    'globalopt',
-    
-    # one of these gvns is causing a segfault in opt
-    # 'gvn-hoist',
-    # 'gvn-sink',
-    
-    'gvn',
-    'instsimplify',
-    'ipsccp',
-    'ipconstprop',
-    'jump-threading',
-    'latesimplifycfg',
-    'lcssa',
-    'libcalls-shrinkwrap',
-    'licm',
-    'load-store-vectorizer',
-    
-    # this causes opt to crash
-    # 'localizer',
-    
-    'loop-accesses',
-    'loop-deletion',
-    'loop-distribute',
-    'loop-idiom',
-    
-    # crashes
-    # 'loop-interchange',
-    
-    'loop-load-elim',
-    # 'loop-reduce',
-    'loop-rotate',
-    'loop-simplify',
-    'loop-sink',
-    'loop-vectorize',
-    'loop-unswitch',
-    'memcpyopt',
-    'mergefunc',
-    'mergereturn',
-    'mldst-motion',
-    # 'nary-reassociate',
-    # 'newgvn',
-    'partial-inliner',
-    'partially-inline-libcalls',
-    'prune-eh',
-    'reassociate',
-    'rpo-functionattrs',
-    'sccp',
-    # 'separate-const-offset-from-gep',
-    # 'simple-loop-unswitch',
-    'sink',
-    'slp-vectorizer',
-    # 'slsr',
-    'speculative-execution',
-    'sroa',
-    
+# 'loop-reduce'
+# 'nary-reassociate',
+# 'newgvn',
+# 'separate-const-offset-from-gep',
+# 'simple-loop-unswitch',
+# 'slsr',
     # structureizecfg breaks invokes in tsp-ga:
 #     Block containing LandingPadInst must be jumped to only by the unwind edge of an invoke.
 #   %300 = landingpad { i8*, i32 }
 #           catch i8* null
 # LLVM ERROR: Broken function found, compilation aborted!
     # 'structurizecfg',
-    
+
+# passes that are safe to run
+ALL_PASSES = [
+    'aa',
+    'adce',
+    'alignment-from-assumptions',
+    'always-inline',
+    'argpromotion',
+    'barrier',
+    'basicaa',
+    'basiccg',
+    'bdce',
+    'block-freq',
+    'branch-prob',
+    'constmerge',
+    'correlated-propagation',
+    'deadargelim',
+    'demanded-bits',
+    'domtree',
+    'dse',
+    'early-cse',
+    'elim-avail-extern',
+    'float2int',
+    'functionattrs',
+    'globaldce',
+    'globalopt',
+    'globals-aa',
+    'gvn',
+    'indvars',
+    'inline',
+    'instcombine',
+    'instsimplify',
+    'ipsccp',
+    'jump-threading',
+    'latesimplifycfg',
+    'lazy-block-freq',
+    'lazy-branch-prob',
+    'lazy-value-info',
+    'lcssa',
+    'lcssa-verification',
+    'libcalls-shrinkwrap',
+    'licm',
+    'loop-accesses',
+    'loop-deletion',
+    'loop-distribute',
+    'loop-idiom',
+    'loop-load-elim',
+    'loop-rotate',
+    'loop-simplify',
+    'loop-sink',
+    'loop-unroll',
+    'loop-unswitch',
+    'loop-vectorize',
+    'loops',
+    'memcpyopt',
+    'memdep',
+    'mldst-motion',
+    'opt-remark-emitter',
+    'pgo-memop-opt',
+    'postdomtree',
+    'prune-eh',
+    'reassociate',
+    'rpo-functionattrs',
+    'scalar-evolution',
+    'sccp',
+    'simplifycfg',
+    'slp-vectorizer',
+    'speculative-execution',
+    'sroa',
+    'strip-dead-prototypes',
     'tailcallelim'
 ]
 
@@ -196,16 +184,5 @@ ANALYSIS = [
     'basicaa -aa',
     # 'cfl-anders-aa -aa',
     # 'cfl-steens-aa -aa',
-    'domtree',
-    'postdomtree',
-    'memdep',
-    'indvars',
-    'loop-accesses',
-    'demanded-bits',
-    'block-freq',
-    'branch-prob',
-    'lazy-value-info',
-    'lazy-branch-prob',
-    'lazy-value-info',
-    'loops -loop-simplify -lcssa -scalar-evolution'
+    
 ]

@@ -19,7 +19,7 @@ import opt_data
 PATH = '/Users/kavon/msr/llvm5/bin/'
 DEBUG = False
 OPT_LVL = '-O3'
-PROG = 'tsp-ga'
+PROG = 'linpack'
 TRIALS = 3
 
 # use -Xclang -disable-O0-optnone on clang to prevent it from adding optnone to everything.
@@ -32,10 +32,11 @@ class OptFlagsTuner(MeasurementInterface):
                                         **kwargs)
     self.parallel_compile = True
     
-    self.problem_setup = opt_data.genOptLevels()[OPT_LVL]
-    phase_structure = self.problem_setup[1]
-        
-    self.phaseSet = set([name for name, _ in phase_structure])
+    problem_setup = opt_data.genOptLevels()[OPT_LVL]
+    
+    self.objectiveFun = problem_setup[0]
+    self.passes = problem_setup[1]
+    self.max_passes = problem_setup[2]
     
 
   def manipulator(self):
@@ -45,41 +46,26 @@ class OptFlagsTuner(MeasurementInterface):
     """
     manipulator = ConfigurationManipulator()
     
-    misc_passes = self.problem_setup[2]
-    phases = list(self.phaseSet)
+    num_options = len(self.passes)-1
     
-    # reordering top-level phases/passes affects time
-    phases.extend(misc_passes)
-    manipulator.add_parameter(PermutationParameter('phases', phases))
-    
-    # in addition, reducing the number of top-level phases/passes can help
-    manipulator.add_parameter(IntegerParameter('len_phases', 0, len(phases)))
-    
-    # then, passes within a phase can be permuted and/or dropped
-    phase_structure = self.problem_setup[1]
-    for name, passes in phase_structure:
-        manipulator.add_parameter(PermutationParameter(name, passes))
-        manipulator.add_parameter(IntegerParameter('len_' + name, 0, len(passes)))
+    # choose for a sequence of at most max_passes passes
+    for i in range(self.max_passes):
+        # choose any pass you would like, or -1 for nothing
+        manipulator.add_parameter(IntegerParameter(i, -1, num_options))
     
     return manipulator
 
   def build_passes(self, cfg):
     passes = ' '.join(opt_data.ALWAYS_FIRST)
     
-    allTopLevel = cfg['phases']
-    lenTop = cfg['len_phases']
-    topLevel = allTopLevel[:lenTop]
-    
-    for item in topLevel:
-      if item in self.phaseSet:
-        subOrder = cfg[item]
-        subLen = cfg['len_' + item]
-        asFlags = [' -{0}'.format(p) for p in subOrder[:subLen]]
-        passes += ''.join(asFlags)
-      else:
-        passes += ' -{0}'.format(item)
+    for i in range(self.max_passes):
+        num = cfg[i]
+        if num != -1:
+            chosen = self.passes[num]
+            passes += ' -{0}'.format(chosen)
     
     return passes
+
 
   def compile(self, cfg, id):
     """
@@ -133,9 +119,8 @@ class OptFlagsTuner(MeasurementInterface):
     
     
     # apply the objective function
-    objective = self.problem_setup[0]
     compile_time = opt_res['time']
-    total_time = objective(compile_time, avg_runtime)
+    total_time = self.objectiveFun(compile_time, avg_runtime)
 
     run_res['time'] = total_time
     
