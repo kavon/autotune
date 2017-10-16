@@ -10,7 +10,10 @@ def genOptLevels():
                             ('simp3', SIMPLIFY),
                             ('expand1', EXPAND),
                             ('expand2', EXPAND),
-                            ('expand3', EXPAND)
+                            ('expand3', EXPAND),
+                            ('anal1', ANALYSIS),
+                            ('anal2', ANALYSIS),
+                            ('anal3', ANALYSIS)
                        ]
     
     opt_levels['-O0'] = (genCombineTimes(2, 1),     # objective function
@@ -67,13 +70,12 @@ def genCombineTimes(compileW, runtimeW, kind='sphere'):
 
 SIMPLIFY = [
     'instcombine',
-    'dse',
     'simplifycfg',
     'early-cse'
 ]
 
 EXPAND = [
-    'inline',
+    'basiccg -inline',
     # a sequence that tries to unroll loops
     'loops -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll'
 ]
@@ -82,14 +84,17 @@ EXPAND = [
 MISC = [
     'adce',
     'bdce',
-    'block-freq',
-    'branch-prob',
-    'consthoist',
     'constmerge',
     'constprop',
     'correlated-propagation',
+    'deadargelim',
+    'die',
+    'dse',
     'early-cse-memssa',
-    'globaldce',
+    'elim-avail-extern',
+    'float2int',
+    'strip-dead-prototypes -globaldce',
+    'globalopt',
     
     # one of these gvns is causing a segfault in opt
     # 'gvn-hoist',
@@ -97,28 +102,42 @@ MISC = [
     
     'gvn',
     'instsimplify',
+    'ipsccp',
     'ipconstprop',
     'jump-threading',
     'latesimplifycfg',
     'lcssa',
+    'libcalls-shrinkwrap',
+    'licm',
     'load-store-vectorizer',
     
     # this causes opt to crash
     # 'localizer',
     
-    'loop-interchange',
+    'loop-accesses',
+    'loop-deletion',
+    'loop-distribute',
+    'loop-idiom',
+    
+    # crashes
+    # 'loop-interchange',
+    
     'loop-load-elim',
     'loop-reduce',
+    'loop-rotate',
+    'loop-simplify',
     'loop-sink',
+    'loop-vectorize',
     'loop-unswitch',
     'memcpyopt',
     'mergefunc',
     'mergereturn',
     'mldst-motion',
-    'nary-reassociate',
-    'newgvn',
+    # 'nary-reassociate',
+    # 'newgvn',
     'partial-inliner',
     'partially-inline-libcalls',
+    'prune-eh',
     'reassociate',
     'sccp',
     'separate-const-offset-from-gep',
@@ -147,16 +166,46 @@ MISC = [
 
 
 # Help reduce the search space by pinning passes
-
+# must include initial dash
 ALWAYS_FIRST = [
-    # '-targetlibinfo',
-    # '-tti',
+    '-targetlibinfo',
+    '-tti',
     # '-targetpassconfig',
-    # '-tbaa',
-    # '-scoped-noalias',
-    # '-assumption-cache-tracker',
-    # '-profile-summary-info',
+    '-tbaa',
+    '-scoped-noalias',
+    '-assumption-cache-tracker',
+    '-profile-summary-info',
     '-forceattrs',
     '-inferattrs',
-    '-mem2reg'
+    '-mem2reg',
+    '-lower-expect'
+]
+
+# TODO: this should appear first, and order matters in terms of who
+# wins. BasicAA should break ties though, and should appear last?
+ALIAS_QUERIES = [
+    'tbaa',
+    'scoped-noalias',
+    'cfl-anders-aa',
+    'cfl-steens-aa'
+]
+
+
+ANALYSIS = [
+    'basicaa -aa',
+    # 'cfl-anders-aa -aa',
+    # 'cfl-steens-aa -aa',
+    'domtree',
+    'postdomtree',
+    'memdep',
+    'indvars',
+    'loop-accesses',
+    'demanded-bits',
+    'block-freq',
+    'branch-prob',
+    'lazy-value-info',
+    'lazy-branch-prob',
+    'lazy-value-info',
+    'rpo-functionattrs',
+    'loops -loop-simplify -lcssa -scalar-evolution'
 ]

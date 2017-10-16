@@ -21,6 +21,8 @@ DEBUG = False
 OPT_LVL = '-O3'
 PROG = 'tsp-ga'
 
+# use -Xclang -disable-O0-optnone on clang to prevent it from adding optnone to everything.
+
 
 class OptFlagsTuner(MeasurementInterface):
     
