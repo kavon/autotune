@@ -77,7 +77,7 @@ SIMPLIFY = [
 EXPAND = [
     'basiccg -inline',
     # a sequence that tries to unroll loops
-    'loops -loop-simplify -lcssa-verification -lcssa -scalar-evolution -loop-unroll'
+    'loops -loop-simplify -lcssa -scalar-evolution -loop-unroll'
 ]
 
 # passes that are commented out below were suspected of causing opt to crash.
@@ -90,7 +90,7 @@ MISC = [
     'deadargelim',
     'die',
     'dse',
-    'early-cse-memssa',
+    # 'early-cse-memssa',
     'elim-avail-extern',
     'float2int',
     'strip-dead-prototypes -globaldce',
@@ -123,7 +123,7 @@ MISC = [
     # 'loop-interchange',
     
     'loop-load-elim',
-    'loop-reduce',
+    # 'loop-reduce',
     'loop-rotate',
     'loop-simplify',
     'loop-sink',
@@ -139,12 +139,13 @@ MISC = [
     'partially-inline-libcalls',
     'prune-eh',
     'reassociate',
+    'rpo-functionattrs',
     'sccp',
-    'separate-const-offset-from-gep',
-    'simple-loop-unswitch',
+    # 'separate-const-offset-from-gep',
+    # 'simple-loop-unswitch',
     'sink',
     'slp-vectorizer',
-    'slsr',
+    # 'slsr',
     'speculative-execution',
     'sroa',
     
@@ -206,6 +207,5 @@ ANALYSIS = [
     'lazy-value-info',
     'lazy-branch-prob',
     'lazy-value-info',
-    'rpo-functionattrs',
     'loops -loop-simplify -lcssa -scalar-evolution'
 ]

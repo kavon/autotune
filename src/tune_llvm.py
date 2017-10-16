@@ -20,6 +20,7 @@ PATH = '/Users/kavon/msr/llvm5/bin/'
 DEBUG = False
 OPT_LVL = '-O3'
 PROG = 'tsp-ga'
+TRIALS = 4
 
 # use -Xclang -disable-O0-optnone on clang to prevent it from adding optnone to everything.
 
@@ -95,6 +96,7 @@ class OptFlagsTuner(MeasurementInterface):
     run_res = None
     opt_cmd = '(no opt cmd)'
     build_cmd = '(no build cmd)'
+    avg_runtime = 0.0
     try:
         # optimize
         opt_cmd = (PATH + 'opt ' + passes + ' ./src/apps/' + PROG + '.bc -o '
@@ -109,9 +111,13 @@ class OptFlagsTuner(MeasurementInterface):
         build_res = self.call_program(build_cmd)
         assert build_res['returncode'] == 0
         
-        # run
-        run_res = self.call_program(bin_outfile)
-        assert run_res['returncode'] == 0
+        # run and compute an average
+        for _ in xrange(TRIALS):
+            run_res = self.call_program(bin_outfile)
+            assert run_res['returncode'] == 0
+            avg_runtime += run_res['time']
+        
+        avg_runtime = avg_runtime / float(TRIALS)
     
     except:
         # ensure we made it all the way through
@@ -129,9 +135,7 @@ class OptFlagsTuner(MeasurementInterface):
     # apply the objective function
     objective = self.problem_setup[0]
     compile_time = opt_res['time']
-    run_time = run_res['time']
-    
-    total_time = objective(compile_time, run_time)
+    total_time = objective(compile_time, avg_runtime)
 
     run_res['time'] = total_time
     

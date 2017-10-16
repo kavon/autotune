@@ -17,4 +17,20 @@ Here's an example:
 ./src/tune_llvm.py --no-dups --display-frequency=5 --parallelism 6 --stop-after=60
 ```
 
+Here's what the progress of the tuning would look like:
+
+```
+[     6s]    INFO opentuner.search.plugin.DisplayPlugin: tests=7, best #13, cost time=20.7208, found by UniformGreedyMutation
+[    13s]    INFO opentuner.search.plugin.DisplayPlugin: tests=21, best #48, cost time=19.7285, found by NormalGreedyMutation
+[    19s]    INFO opentuner.search.plugin.DisplayPlugin: tests=28, best #53, cost time=19.5277, found by UniformGreedyMutation
+[    27s]    INFO opentuner.search.plugin.DisplayPlugin: tests=42, best #53, cost time=19.5277, found by UniformGreedyMutation
+[    36s]    INFO opentuner.search.plugin.DisplayPlugin: tests=56, best #53, cost time=19.5277, found by UniformGreedyMutation
+[    44s]    INFO opentuner.search.plugin.DisplayPlugin: tests=70, best #53, cost time=19.5277, found by UniformGreedyMutation
+[    51s]    INFO opentuner.search.plugin.DisplayPlugin: tests=83, best #82, cost time=19.3576, found by UniformGreedyMutation
+```
+
+Note that the value of "time" is just the output of the objective function, which the tuner is
+trying to minimise. It has a relationship with the compile and run time of the program being
+tuned, but it's not easy to describe what it is here.
+
 Run `./src/tune_llvm.py -h` for more options.
