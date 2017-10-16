@@ -1,3 +1,4 @@
 opentuner.db
 opentuner.log
 *.pyc
+*.bc

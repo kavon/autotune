@@ -20,6 +20,7 @@ PATH = '/Users/kavon/msr/llvm5/bin/'
 DEBUG = False
 OPT_LVL = '-O3'
 PROG = 'linpack'
+PROG_EXT = '.c'
 TRIALS = 3
 
 # use -Xclang -disable-O0-optnone on clang to prevent it from adding optnone to everything.
@@ -37,6 +38,8 @@ class OptFlagsTuner(MeasurementInterface):
     self.objectiveFun = problem_setup[0]
     self.passes = problem_setup[1]
     self.max_passes = problem_setup[2]
+    
+    self.startup()
     
 
   def manipulator(self):
@@ -153,6 +156,17 @@ class OptFlagsTuner(MeasurementInterface):
             PROG, OPT_LVL, self.build_passes(configuration.data))
     print msg
     
+  def startup(self):
+      # build bitcode file
+      BENCHDIR = './src/apps/'
+      infile = BENCHDIR + PROG + PROG_EXT
+      bc_outfile = BENCHDIR + PROG + '.bc'
+      build_cmd = (PATH + 'clang++ -O0 -Xclang -disable-O0-optnone -c -emit-llvm ' + infile + ' -o ' + bc_outfile)
+      build_res = self.call_program(build_cmd)
+      assert build_res['returncode'] == 0
+
+  
+
 
 
 if __name__ == '__main__':
