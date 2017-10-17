@@ -16,11 +16,9 @@ from opentuner.search.objective import SearchObjective
 import opt_data
 
 # have to use one consistent clang/opt/llc build
-PATH = '/Users/kavon/msr/llvm5/bin/'
-DEBUG = False
 OPT_LVL = '-O3'
 PROG = 'linpack'
-PROG_EXT = '.c'
+MAKEFILE = './programs/' + PROG + '/tune.mk'
 TRIALS = 3
 
 # use -Xclang -disable-O0-optnone on clang to prevent it from adding optnone to everything.
@@ -39,7 +37,9 @@ class OptFlagsTuner(MeasurementInterface):
     self.passes = problem_setup[1]
     self.max_passes = problem_setup[2]
     
-    self.startup()
+    # build bitcode file
+    self.make(MAKEFILE, "clean")
+    self.make(MAKEFILE, "bitcode")
     
 
   def manipulator(self):
@@ -76,9 +76,7 @@ class OptFlagsTuner(MeasurementInterface):
     """
     
     passes = self.build_passes(cfg)
-    
-    opt_outfile = './out/' + PROG + '_opt{0}.bc'.format(id)
-    bin_outfile = './out/tmp{0}.bin'.format(id)
+    passes = "\"" + passes + "\""
     
     build_res = None
     opt_res = None
@@ -88,22 +86,14 @@ class OptFlagsTuner(MeasurementInterface):
     avg_runtime = 0.0
     try:
         # optimize
-        opt_cmd = (PATH + 'opt ' + passes + ' ./src/apps/' + PROG + '.bc -o '
-                + opt_outfile)
-        if DEBUG:
-            print opt_cmd, '\n'
-        opt_res = self.call_program(opt_cmd)
-        assert opt_res['returncode'] == 0
+        opt_res = self.make(MAKEFILE, "optimize", ID=id, PASSES=passes)
         
         # build executable
-        build_cmd = (PATH + 'clang++ ' + opt_outfile + ' -o ' + bin_outfile)
-        build_res = self.call_program(build_cmd)
-        assert build_res['returncode'] == 0
+        build_res = self.make(MAKEFILE, "link", ID=id)
         
         # run and compute an average
         for _ in xrange(TRIALS):
-            run_res = self.call_program(bin_outfile)
-            assert run_res['returncode'] == 0
+            run_res = self.make(MAKEFILE, "run", ID=id)
             avg_runtime += run_res['time']
         
         avg_runtime = avg_runtime / float(TRIALS)
@@ -117,7 +107,8 @@ class OptFlagsTuner(MeasurementInterface):
         assert False, "Something went wrong!"
         
     finally:
-        self.call_program('rm -f ' + opt_outfile + ' ' + bin_outfile)
+        # clean up these files
+        self.make(MAKEFILE, "selfclean", ID=id)
     
     
     
@@ -155,18 +146,22 @@ class OptFlagsTuner(MeasurementInterface):
     msg = "Tuned on program {0}, with priority {1}. \nBest pass ordering found:\n{2}".format(
             PROG, OPT_LVL, self.build_passes(configuration.data))
     print msg
-    
-  def startup(self):
-      # build bitcode file
-      BENCHDIR = './src/apps/'
-      infile = BENCHDIR + PROG + PROG_EXT
-      bc_outfile = BENCHDIR + PROG + '.bc'
-      build_cmd = (PATH + 'clang++ -O0 -Xclang -disable-O0-optnone -c -emit-llvm ' + infile + ' -o ' + bc_outfile)
-      build_res = self.call_program(build_cmd)
-      assert build_res['returncode'] == 0
 
   
+  def make(self, makefile, target, ID=None, PASSES=None):
+    cmd = ''
 
+    if ID:
+        cmd += 'ID={0} '.format(ID)
+
+    if PASSES:
+      cmd += 'PASSES={0} '.format(PASSES)
+
+    cmd += 'make -f {0} {1}'.format(makefile, target)
+
+    result = self.call_program(cmd)
+    assert result['returncode'] == 0, "autotune error executing: \n" + cmd
+    return result
 
 
 if __name__ == '__main__':
