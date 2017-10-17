@@ -1,0 +1,55 @@
+# Expected Targets: bitcode, optimize, link, run
+#
+#
+
+# TODO: add a phony thing here
+
+
+# This target should build all initially unoptimized bitcode files
+# and otherwise setup the directory for tuning.
+# It is only executed once at the start of the tuning.
+bitcode:
+
+
+# Target Inputs:
+#   PASSES -- a string with the current pass configuration
+#   ID     -- a configuration-unique ID number. Used to prevent file clashes
+#             during parallel tuning.
+#
+# Target Outputs:
+#   Any output to stdout/stderr is ignored. The return code is
+#   checked for success, and the time to execute this target
+#   is recorded by the tuner.
+#
+#  This target should optimize all initial bitcode files according to
+#  the PASSES given, and output the new bitcode files 
+#  (using the unique ID in the filename for the configuration).
+#  Run once per configuration.
+#
+optimize:
+
+
+# Target Inputs:
+#   ID     -- a configuration-unique ID number.
+#
+# Target Outputs:
+#   Any output to stdout/stderr is ignored. The return code is
+#   checked for success.
+#
+#  This target should build the final executable. Run once per
+#  configuration
+link:
+
+
+
+# Target Inputs:
+#   ID     -- a configuration-unique ID number.
+#
+# Target Outputs:
+#   Any output to stdout/stderr is ignored. The return code is
+#   checked for success. The time to execute this target is recorded.
+#
+#  This target should execute the final executable. 
+#  Run possibly more than once per configuration.
+run:
+
