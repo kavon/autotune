@@ -19,7 +19,7 @@ def genOptLevels():
                          150
                         )
                         
-    opt_levels['-O3'] = (genCombineTimes(1, 10, 'runOnly'),
+    opt_levels['-O3'] = (genCombineTimes(0, 10),
                          ALL_PASSES,
                          150
                         )
@@ -29,16 +29,19 @@ def genOptLevels():
 def genCombineTimes(compileW, runtimeW, kind='sphere'):
     # Higher weight means that dimension is more important to minimize.
     
+    def adjust(num):
+        return round(num, 2) + 1.0
+    
     # De Jong's spherical objective function, with tweaks.
     def spherical(compT, runT):
-        compT += 1.0
-        runT += 1.0
+        compT = adjust(compT)
+        runT = adjust(runT)
         return ((compileW * (compT ** 2))
                 + (runtimeW * (runT ** 2)))
     
     def linear(compT, runT):
-        compT += 1.0
-        runT += 1.0
+        compT = adjust(compT)
+        runT = adjust(runT)
         return ((compileW * compT)
                 + (runtimeW * runT))
                 
@@ -136,8 +139,8 @@ ALL_PASSES = [
     'memcpyopt',
     'memdep',
     'mldst-motion',
-    'opt-remark-emitter',
-    'pgo-memop-opt',
+    # 'opt-remark-emitter',
+    # 'pgo-memop-opt',
     'postdomtree',
     'prune-eh',
     'reassociate',
@@ -159,7 +162,7 @@ ALL_PASSES = [
 '''
 
 
-# Help reduce the search space by pinning passes
+# Help reduce the search space by pinning initial passes.
 # must include initial dash
 ALWAYS_FIRST = [
     '-targetlibinfo',
@@ -184,9 +187,9 @@ ALIAS_QUERIES = [
     'cfl-steens-aa'
 ]
 
-
+# TODO
 ANALYSIS = [
-    'basicaa -aa',
+    # 'basicaa -aa',
     # 'cfl-anders-aa -aa',
     # 'cfl-steens-aa -aa',
     

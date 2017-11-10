@@ -15,13 +15,13 @@ from opentuner.search.objective import SearchObjective
 
 import opt_data
 
-# have to use one consistent clang/opt/llc build
+# NOTE: you have to use one consistent clang/opt/llc build
+
+# TODO: don't hardcode some of these
 OPT_LVL = '-O3'
 PROG = 'linpack'
 MAKEFILE = './programs/' + PROG + '/tune.mk'
 TRIALS = 3
-
-# use -Xclang -disable-O0-optnone on clang to prevent it from adding optnone to everything.
 
 
 class OptFlagsTuner(MeasurementInterface):
@@ -53,8 +53,11 @@ class OptFlagsTuner(MeasurementInterface):
     
     # choose for a sequence of at most max_passes passes
     for i in range(self.max_passes):
-        # choose any pass you would like, or -1 for nothing
-        manipulator.add_parameter(IntegerParameter(i, -1, num_options))
+        passNum = 'pass_' + str(i)
+        # some pass
+        manipulator.add_parameter(IntegerParameter(passNum, 0, num_options))
+        # and whether to turn it on or off
+        manipulator.add_parameter(EnumParameter('enable_' + passNum, [True, False]))
     
     return manipulator
 
@@ -62,8 +65,11 @@ class OptFlagsTuner(MeasurementInterface):
     passes = ' '.join(opt_data.ALWAYS_FIRST)
     
     for i in range(self.max_passes):
-        num = cfg[i]
-        if num != -1:
+        passKey = 'pass_' + str(i)
+        enableKey = 'enable_' + passKey
+        enabled = cfg[enableKey]
+        if enabled:
+            num = cfg[passKey]
             chosen = self.passes[num]
             passes += ' -{0}'.format(chosen)
     

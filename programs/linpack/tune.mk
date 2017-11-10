@@ -18,7 +18,9 @@ RESOURCE=${LOC}/${PROGRAM}
 # and otherwise setup the directory for tuning.
 # It is only executed once at the start of the tuning.
 bitcode:
-	${LLVM_PATH}/clang++ -O0 -Xclang -disable-O0-optnone -emit-llvm -c ${RESOURCE}${EXT} -o ${RESOURCE}.bc
+	${LLVM_PATH}/clang++ -O0 -S -emit-llvm -c ${RESOURCE}${EXT} -o ${RESOURCE}_orig.ll
+	sed -f ${LOC}/../clang_clean.sed ${RESOURCE}_orig.ll > ${RESOURCE}.ll
+	${LLVM_PATH}/opt -verify ${RESOURCE}.ll -o ${RESOURCE}.bc
 
 
 # Target Inputs:
@@ -82,4 +84,4 @@ selfclean:
 
 # deletes _all_ temporary files. this executed only during startup (before bitcode)
 clean:
-	rm -f ${LOC}/*.bc ${LOC}/*.bin
+	rm -f ${LOC}/*.bc ${LOC}/*.bin ${LOC}/*.ll
