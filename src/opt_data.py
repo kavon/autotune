@@ -1,28 +1,45 @@
 
+OBJ_FUN_K = 'objfun'
+ALL_PASSES_K = 'allpasses'
+MAX_PASSES_K = 'maxpasses'
+ALL_KNOBS_K = 'allknobs'
 
 # Returns the main structure of all optimization levels
 def genOptLevels():
     opt_levels = {}
     
-    opt_levels['-O0'] = (genCombineTimes(2, 1),     # objective function
-                         ALL_PASSES,                # passes to be considered
-                         150                        # max passes applied to prog
-                        )
+    ## TODO: make a dict
+    
+    opt_levels['-O0'] = {
+                        OBJ_FUN_K : genCombineTimes(2, 1),     # objective function
+                        ALL_PASSES_K : ALL_PASSES,             # optimization passes
+                        MAX_PASSES_K : 150,                    # max passes
+                        ALL_KNOBS_K : ALL_KNOBS
+                        }
                         
-    opt_levels['-O1'] = (genCombineTimes(1, 2),
-                         ALL_PASSES,
-                         150
-                        )
+    opt_levels['-O1'] = {
+                        OBJ_FUN_K : genCombineTimes(1, 2),
+                        ALL_PASSES_K : ALL_PASSES,
+                        MAX_PASSES_K : 150,
+                        ALL_KNOBS_K : ALL_KNOBS
+                        }
                         
-    opt_levels['-O2'] = (genCombineTimes(1, 7),
-                         ALL_PASSES,
-                         150
-                        )
                         
-    opt_levels['-O3'] = (genCombineTimes(0, 10),
-                         ALL_PASSES,
-                         150
-                        )
+    opt_levels['-O2'] = {
+                        OBJ_FUN_K : genCombineTimes(1, 7),
+                        ALL_PASSES_K : ALL_PASSES,
+                        MAX_PASSES_K : 150,
+                        ALL_KNOBS_K : ALL_KNOBS
+                        }
+                        
+                        
+    opt_levels['-O3'] = {
+                        OBJ_FUN_K : genCombineTimes(0, 10),
+                        ALL_PASSES_K : ALL_PASSES,
+                        MAX_PASSES_K : 150,
+                        ALL_KNOBS_K : ALL_KNOBS
+                        }
+                        
     return opt_levels
 
 
@@ -59,6 +76,19 @@ def genCombineTimes(compileW, runtimeW, kind='sphere'):
     
     return switch[kind]
     
+    
+ALL_KNOBS = [
+    # name, min, max  (inclusive)
+    
+    # lower value = inline more aggressively
+    # the actual min/max is INT_MIN, INT_MAX.
+    # I've picked conservative values.
+    ("inline-threshold", -32766, 32766),  # default = 225
+    ("jump-threading-implication-search-threshold", 0, 10), # default = 3
+    ("jump-threading-threshold", 0, 20), # default = 6
+    ("loop-interchange-threshold", -5, 5)  # default = 0
+    
+]
  
 # one of these gvns is causing a segfault in opt
 # 'gvn-hoist',

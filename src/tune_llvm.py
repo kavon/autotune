@@ -33,9 +33,10 @@ class OptFlagsTuner(MeasurementInterface):
     
     problem_setup = opt_data.genOptLevels()[OPT_LVL]
     
-    self.objectiveFun = problem_setup[0]
-    self.passes = problem_setup[1]
-    self.max_passes = problem_setup[2]
+    self.objectiveFun = problem_setup[opt_data.OBJ_FUN_K]
+    self.passes = problem_setup[opt_data.ALL_PASSES_K]
+    self.max_passes = problem_setup[opt_data.MAX_PASSES_K]
+    self.knobs = problem_setup[opt_data.ALL_KNOBS_K]
     
     # build bitcode file
     self.make(MAKEFILE, "clean")
@@ -51,17 +52,22 @@ class OptFlagsTuner(MeasurementInterface):
     
     num_options = len(self.passes)-1
     
-    # choose for a sequence of at most max_passes passes
+    # choose for a sequence of at most `max_passes` passes
     for i in range(self.max_passes):
         passNum = 'pass_' + str(i)
         # some pass
         manipulator.add_parameter(IntegerParameter(passNum, 0, num_options))
         # and whether to turn it on or off
         manipulator.add_parameter(EnumParameter('enable_' + passNum, [True, False]))
+        
+    # choose from a set of knobs
+    for knob, minInt, maxInt in self.knobs:
+        manipulator.add_parameter(IntegerParameter(knob, minInt, maxInt))
+        manipulator.add_parameter(EnumParameter('enable_' + knob, [True, False]))
     
     return manipulator
 
-  def build_passes(self, cfg):
+  def build_options(self, cfg):
     passes = ' '.join(opt_data.ALWAYS_FIRST)
     
     for i in range(self.max_passes):
@@ -72,6 +78,14 @@ class OptFlagsTuner(MeasurementInterface):
             num = cfg[passKey]
             chosen = self.passes[num]
             passes += ' -{0}'.format(chosen)
+            
+    for i in range(len(self.knobs)):
+        knob = self.knobs[i][0]
+        enableKnob = 'enable_' + knob
+        enabled = cfg[enableKnob]
+        if enabled:
+            val = cfg[knob]
+            passes += ' -{0}={1}'.format(knob, val)
     
     return passes
 
@@ -81,7 +95,7 @@ class OptFlagsTuner(MeasurementInterface):
     Compile a given configuration in parallel
     """
     
-    passes = self.build_passes(cfg)
+    passes = self.build_options(cfg)
     passes = "\"" + passes + "\""
     
     build_res = None
@@ -150,7 +164,7 @@ class OptFlagsTuner(MeasurementInterface):
     # print "Optimal passes written to " + outfile + ":", configuration.data
     # self.manipulator().save_to_file(configuration.data, outfile)
     msg = "Tuned on program {0}, with priority {1}. \nBest pass ordering found:\n{2}".format(
-            PROG, OPT_LVL, self.build_passes(configuration.data))
+            PROG, OPT_LVL, self.build_options(configuration.data))
     print msg
 
   
