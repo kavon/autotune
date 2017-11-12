@@ -1,8 +1,11 @@
 
+import json
+
 OBJ_FUN_K = 'objfun'
 ALL_PASSES_K = 'allpasses'
 MAX_PASSES_K = 'maxpasses'
 ALL_KNOBS_K = 'allknobs'
+OPT_ONLY_K = 'optonly'
 
 # Returns the main structure of all optimization levels
 def genOptLevels():
@@ -14,7 +17,7 @@ def genOptLevels():
                         OBJ_FUN_K : genCombineTimes(2, 1),     # objective function
                         ALL_PASSES_K : ALL_PASSES,             # optimization passes
                         MAX_PASSES_K : 150,                    # max passes
-                        ALL_KNOBS_K : ALL_KNOBS
+                        ALL_KNOBS_K : ALL_KNOBS                # knobs
                         }
                         
     opt_levels['-O1'] = {
@@ -40,6 +43,14 @@ def genOptLevels():
                         ALL_KNOBS_K : ALL_KNOBS
                         }
                         
+    opt_levels['optonly'] = {
+                        OBJ_FUN_K : analyzeOptStats,
+                        ALL_PASSES_K : ALL_PASSES,
+                        MAX_PASSES_K : 150,
+                        ALL_KNOBS_K : ALL_KNOBS,
+                        OPT_ONLY_K : ''  # only the presence of this key,val pair is needed
+                        }
+                        
     return opt_levels
 
 
@@ -50,19 +61,19 @@ def genCombineTimes(compileW, runtimeW, kind='sphere'):
         return round(num, 3) + 1.0
     
     # De Jong's spherical objective function, with tweaks.
-    def spherical(compT, runT):
+    def spherical(compT, runT, compStats):
         compT = adjust(compT)
         runT = adjust(runT)
         return ((compileW * (compT ** 2))
                 + (runtimeW * (runT ** 2)))
     
-    def linear(compT, runT):
+    def linear(compT, runT, compStats):
         compT = adjust(compT)
         runT = adjust(runT)
         return ((compileW * compT)
                 + (runtimeW * runT))
                 
-    def runOnly(_, runT):
+    def runOnly(_, runT, compStats):
         runT += 1.0
         return (runT ** 2)
     
@@ -75,6 +86,40 @@ def genCombineTimes(compileW, runtimeW, kind='sphere'):
     assert kind in switch, "wrong objective function kind"
     
     return switch[kind]
+    
+    
+def analyzeOptStats(compT, _ignore, compStats):
+    data = json.loads(compStats)
+    
+    # dead simple heuristic: inlining + simplification
+    # means the program is in some sense evaluated at compile time,
+    # so there should be less to do at runtime.
+    # machine learning to assign weights would be a lot fancier than intution :)
+    
+    # TODO probably worth making a multi-level dictionary
+    # to handle pass.* and pass.specificStat weighting.
+    featureVector = [
+        ("early-cse.", 1),
+        ("instcombine.", 1),
+        ("inline.NumInlined", 100),
+        ("inline.NumCallsDeleted", 1000),
+        ("instsimplify.", 1),
+        ("gvn.", 1),
+        ("simplifycfg.", 2)
+    ]
+    
+    count = 0
+    for name, val in data.iteritems():
+        
+        for feature, weight in featureVector:
+            if name.startswith(feature):
+                num = int(val)
+                count += num * weight
+                break
+    
+    # search is minimizing our output, and we
+    # want to maximize our count, so we just negate.
+    return -(float(count))
     
     
 ALL_KNOBS = [

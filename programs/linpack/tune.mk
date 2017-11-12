@@ -5,8 +5,8 @@
 # TODO: add a phony thing here
 
 
-LLVM_PATH=/Users/kavon/msr/llvm5/bin
-#LLVM_PATH=/Users/kavon/msr/tot-llvm/install/bin
+#LLVM_PATH=/Users/kavon/msr/llvm5/bin
+LLVM_PATH=/Users/kavon/msr/tot-llvm/install/bin
 
 PROGRAM=linpack
 EXT=.c

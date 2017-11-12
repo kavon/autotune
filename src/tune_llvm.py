@@ -20,7 +20,7 @@ import opt_data
 # NOTE: you have to use one consistent clang/opt/llc build
 
 # TODO: don't hardcode some of these
-OPT_LVL = '-O3'
+OPT_LVL = 'optonly'
 PROG = 'linpack'
 MAKEFILE = './programs/' + PROG + '/tune.mk'
 MIN_TRIALS = 2
@@ -41,6 +41,10 @@ class OptFlagsTuner(MeasurementInterface):
     self.parallel_compile = True
     
     problem_setup = opt_data.genOptLevels()[OPT_LVL]
+    
+    self.optOnly = False
+    if opt_data.OPT_ONLY_K in problem_setup:
+        self.optOnly = True
     
     self.objectiveFun = problem_setup[opt_data.OBJ_FUN_K]
     self.passes = problem_setup[opt_data.ALL_PASSES_K]
@@ -113,8 +117,9 @@ class OptFlagsTuner(MeasurementInterface):
         # optimize
         opt_res = self.make(MAKEFILE, "optimize", ID=id, PASSES=passes)
         
-        # build executable
-        build_res = self.make(MAKEFILE, "link", ID=id)
+        if not self.optOnly:
+            # build executable
+            build_res = self.make(MAKEFILE, "link", ID=id)
         
     except Exception as inst:
         print "---------------------------------------------"
@@ -138,15 +143,19 @@ class OptFlagsTuner(MeasurementInterface):
     '''
     
     # run and compute an average
-    avg_runtime, _ = self.get_runtime(id)
+    avg_runtime = 0.0
+    
+    if not self.optOnly:
+        run_time, _ = self.get_runtime(id)
+        avg_runtime = run_time
     
     # grab the optimization stats
-    # stats_res = self.make(MAKEFILE, "opt_stats", ID=id)
-    # print stats_res
+    stats_res = self.make(MAKEFILE, "opt_stats", ID=id)
+    stats_out = stats_res['stdout']
     
     # apply the objective function
     compile_time = compile_result['time']
-    total_time = self.objectiveFun(compile_time, avg_runtime)
+    total_time = self.objectiveFun(compile_time, avg_runtime, stats_out)
     
     # clean up everything
     self.make(MAKEFILE, "selfclean", ID=id)
@@ -222,7 +231,10 @@ class OptFlagsTuner(MeasurementInterface):
     cmd += 'make -f {0} {1}'.format(makefile, target)
 
     result = self.call_program(cmd)
-    assert result['returncode'] == 0, "autotune error executing: \n" + cmd
+    if result['returncode'] != 0:
+        print ("autotune error executing: \n" + cmd)
+        assert False, "make command returned non-zero exit code!!"
+        
     return result
 
 
