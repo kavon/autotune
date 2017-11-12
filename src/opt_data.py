@@ -96,6 +96,11 @@ def analyzeOptStats(compT, _ignore, compStats):
     # so there should be less to do at runtime.
     # machine learning to assign weights would be a lot fancier than intution :)
     
+    # actually, i think running -instcount at the end is a good indicator
+    # of how well optimized the program is. we can guide the optimizations
+    # by picking the kinds of instructions (and other properties of the program)
+    # we want to change
+    
     # TODO probably worth making a multi-level dictionary
     # to handle pass.* and pass.specificStat weighting.
     featureVector = [

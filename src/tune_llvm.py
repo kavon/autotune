@@ -81,7 +81,12 @@ class OptFlagsTuner(MeasurementInterface):
     return manipulator
 
   def build_options(self, cfg):
-    passes = ' '.join(opt_data.ALWAYS_FIRST)
+    passes = ''
+    
+    if self.optOnly:
+        passes = '-disable-output '
+        
+    passes += ' '.join(opt_data.ALWAYS_FIRST)
     
     for i in range(self.max_passes):
         passKey = 'pass_' + str(i)
