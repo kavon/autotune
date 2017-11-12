@@ -80,13 +80,30 @@ def genCombineTimes(compileW, runtimeW, kind='sphere'):
 ALL_KNOBS = [
     # name, min, max  (inclusive)
     
+    ("available-load-scan-limit", 0, 18), # uint, default = 6
+    ("bonus-inst-threshold", 0, 10),      # uint, default = 1
+    ("early-ifcvt-limit", 0, 90), # uint, default = 30
+    
     # lower value = inline more aggressively
     # the actual min/max is INT_MIN, INT_MAX.
     # I've picked conservative values.
     ("inline-threshold", -32766, 32766),  # default = 225
     ("jump-threading-implication-search-threshold", 0, 10), # default = 3
     ("jump-threading-threshold", 0, 20), # default = 6
-    ("loop-interchange-threshold", -5, 5)  # default = 0
+    ("licm-max-num-uses-traversed", 0, 24),  # uint, default = 8
+    ("licm-versioning-max-depth-threshold", 0, 6), # uint, default = 2
+    ("loop-distribute-scev-check-threshold", 0, 128), #uint, default = 8. 128 is the max if a pragma was given
+    ("loop-interchange-threshold", -5, 5),  # default = 0
+    ("loop-load-elimination-scev-check-threshold", 0, 24), # default = 8
+    ("loop-unswitch-threshold", 0, 2000),  # uint, default = 100
+    ("max-dependences", 0, 400), # uint, default = 100
+    ("max-nested-scalar-reduction-interleave", 0, 6), # uint, default = 2
+    ("max-num-inline-blocks", 0, 15), # uint, default = 5
+    ("max-recurse-depth", 0, 4000),  # uint, default = 1000
+    ("max-speculation-depth", 0, 30),  # uint, default = 10
+    ("max-uses-for-sinking", 0, 90),  # uint, default = 30
+    ("memdep-block-number-limit", 0, 3000), # uint, default = 1000
+    ("memdep-block-scan-limit", 0, 300) # uint, default = 100
     
 ]
  
