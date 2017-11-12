@@ -13,6 +13,8 @@ from opentuner.search.manipulator import (ConfigurationManipulator,
                                           PermutationParameter)
 from opentuner.search.objective import SearchObjective
 
+import numpy as np
+
 import opt_data
 
 # NOTE: you have to use one consistent clang/opt/llc build
@@ -21,7 +23,14 @@ import opt_data
 OPT_LVL = '-O3'
 PROG = 'linpack'
 MAKEFILE = './programs/' + PROG + '/tune.mk'
-TRIALS = 3
+MIN_TRIALS = 2
+MAX_TRIALS = 50
+MAX_ERR = 2.0  # provide a precentage. 1.2% = 1.2
+
+def meetsError(samples, mean):
+    sem = np.std(samples) / np.sqrt(len(samples))
+    pct = (sem / mean) * 100.0
+    return pct <= MAX_ERR
 
 
 class OptFlagsTuner(MeasurementInterface):
@@ -100,10 +109,6 @@ class OptFlagsTuner(MeasurementInterface):
     
     build_res = None
     opt_res = None
-    run_res = None
-    opt_cmd = '(no opt cmd)'
-    build_cmd = '(no build cmd)'
-    avg_runtime = 0.0
     try:
         # optimize
         opt_res = self.make(MAKEFILE, "optimize", ID=id, PASSES=passes)
@@ -111,42 +116,42 @@ class OptFlagsTuner(MeasurementInterface):
         # build executable
         build_res = self.make(MAKEFILE, "link", ID=id)
         
-        # run and compute an average
-        for _ in xrange(TRIALS):
-            run_res = self.make(MAKEFILE, "run", ID=id)
-            avg_runtime += run_res['time']
-        
-        avg_runtime = avg_runtime / float(TRIALS)
-    
-    except:
+    except Exception as inst:
+        print "---------------------------------------------"
+        print inst
         # ensure we made it all the way through
-        print ("\n\nCRASHED IN THE FOLLOWING CONFIG:\nopt command: " + opt_cmd + "\nbuild command: " + build_cmd) 
-        assert opt_res != None
-        assert build_res != None
-        assert run_res != None
-        assert False, "Something went wrong!"
+        print ("\n\nCrash while compiling this config:\nID =  " + str(id) + "\npasses = " + passes + "\n") 
+        assert opt_res != None, "died during OPTIMIZE"
+        assert build_res != None, "died during LINK"
+        assert False, "Something else went wrong!!"
         
-    finally:
-        # clean up these files
-        self.make(MAKEFILE, "selfclean", ID=id)
-    
-    
-    
-    # apply the objective function
-    compile_time = opt_res['time']
-    total_time = self.objectiveFun(compile_time, avg_runtime)
-
-    run_res['time'] = total_time
-    
-    return run_res
+    # we only care about optimization time
+    return opt_res
 
   
   def run_precompiled(self, desired_result, input, limit, compile_result, id):
     '''
-    the compile_result is what is returned by compile
+    the compile_result is what is returned by compile.
+    this function is run seqentially with respect to itself.
+    This is needed because the runtime variance is so high when run in
+    parallel that it throws the search off.
     '''
     
-    return Result(time=compile_result['time'])
+    # run and compute an average
+    avg_runtime, _ = self.get_runtime(id)
+    
+    # grab the optimization stats
+    # stats_res = self.make(MAKEFILE, "opt_stats", ID=id)
+    # print stats_res
+    
+    # apply the objective function
+    compile_time = compile_result['time']
+    total_time = self.objectiveFun(compile_time, avg_runtime)
+    
+    # clean up everything
+    self.make(MAKEFILE, "selfclean", ID=id)
+    
+    return Result(time=total_time)
 
   def compile_and_run(self, desired_result, input, limit):
     """
@@ -166,6 +171,43 @@ class OptFlagsTuner(MeasurementInterface):
     msg = "Tuned on program {0}, with priority {1}. \nBest pass ordering found:\n{2}".format(
             PROG, OPT_LVL, self.build_options(configuration.data))
     print msg
+    self.make(MAKEFILE, "clean")
+    
+  
+  def get_runtime(self, id):
+      '''
+      Runs the program until a good average running time is found.
+      '''
+      run_times = []
+      avg_runtime = None
+      run_res = None
+      
+      assert MIN_TRIALS > 1, "bogus mininum"
+      assert MIN_TRIALS < MAX_TRIALS, "bogus number of trials"
+      
+      for trial in xrange(MAX_TRIALS):
+          try:
+              run_res = self.make(MAKEFILE, "run", ID=id)
+          except Exception as inst:
+              print "---------------------------------------------"
+              print inst
+              print "Crashed while running output program! ID = " + str(id)
+              assert False, "compiler has output a broken program!"
+          
+          
+          time = run_res['time']
+          run_times.append(time)
+          mean = np.mean(run_times)
+          if trial >= (MIN_TRIALS-1) and meetsError(run_times, mean):
+              # accept this mean
+              avg_runtime = mean
+              break
+          
+      if avg_runtime is None:
+          print "warning: running time data is noisy!"
+          avg_runtime = np.mean(run_times)
+          
+      return (avg_runtime, run_res)
 
   
   def make(self, makefile, target, ID=None, PASSES=None):

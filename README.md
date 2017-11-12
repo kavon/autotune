@@ -34,3 +34,7 @@ trying to minimise. It has a relationship with the compile and run time of the p
 tuned, but it's not easy to describe what it is here.
 
 Run `./src/tune_llvm.py -h` for more options.
+
+#### Optimizing for Pass Effectiveness
+
+This requires building LLVM with `LLVM_ENABLE_STATS` or assertions enabled. Still a TODO.

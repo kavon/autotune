@@ -47,7 +47,7 @@ def genCombineTimes(compileW, runtimeW, kind='sphere'):
     # Higher weight means that dimension is more important to minimize.
     
     def adjust(num):
-        return round(num, 2) + 1.0
+        return round(num, 3) + 1.0
     
     # De Jong's spherical objective function, with tweaks.
     def spherical(compT, runT):
@@ -163,7 +163,7 @@ ALL_PASSES = [
     'instsimplify',
     'ipsccp',
     'jump-threading',
-    'latesimplifycfg',
+    # 'latesimplifycfg',   # doesn't exist in LLVM 6
     'lazy-block-freq',
     'lazy-branch-prob',
     'lazy-value-info',

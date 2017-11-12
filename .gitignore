@@ -4,3 +4,4 @@ opentuner.log
 *.bc
 *.bin
 *.ll
+*.json
