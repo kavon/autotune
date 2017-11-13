@@ -7,6 +7,8 @@ MAX_PASSES_K = 'maxpasses'
 ALL_KNOBS_K = 'allknobs'
 OPT_ONLY_K = 'optonly'
 
+DEFAULT_MAX_PASSES = 200
+
 # Returns the main structure of all optimization levels
 def genOptLevels():
     opt_levels = {}
@@ -16,14 +18,14 @@ def genOptLevels():
     opt_levels['-O0'] = {
                         OBJ_FUN_K : genCombineTimes(2, 1),     # objective function
                         ALL_PASSES_K : ALL_PASSES,             # optimization passes
-                        MAX_PASSES_K : 150,                    # max passes
+                        MAX_PASSES_K : DEFAULT_MAX_PASSES,     # max passes
                         ALL_KNOBS_K : ALL_KNOBS                # knobs
                         }
                         
     opt_levels['-O1'] = {
                         OBJ_FUN_K : genCombineTimes(1, 2),
                         ALL_PASSES_K : ALL_PASSES,
-                        MAX_PASSES_K : 150,
+                        MAX_PASSES_K : DEFAULT_MAX_PASSES,
                         ALL_KNOBS_K : ALL_KNOBS
                         }
                         
@@ -31,7 +33,7 @@ def genOptLevels():
     opt_levels['-O2'] = {
                         OBJ_FUN_K : genCombineTimes(1, 7),
                         ALL_PASSES_K : ALL_PASSES,
-                        MAX_PASSES_K : 150,
+                        MAX_PASSES_K : DEFAULT_MAX_PASSES,
                         ALL_KNOBS_K : ALL_KNOBS
                         }
                         
@@ -39,14 +41,14 @@ def genOptLevels():
     opt_levels['-O3'] = {
                         OBJ_FUN_K : genCombineTimes(0, 10),
                         ALL_PASSES_K : ALL_PASSES,
-                        MAX_PASSES_K : 150,
+                        MAX_PASSES_K : DEFAULT_MAX_PASSES,
                         ALL_KNOBS_K : ALL_KNOBS
                         }
                         
     opt_levels['optonly'] = {
                         OBJ_FUN_K : analyzeOptStats,
                         ALL_PASSES_K : ALL_PASSES,
-                        MAX_PASSES_K : 150,
+                        MAX_PASSES_K : DEFAULT_MAX_PASSES,
                         ALL_KNOBS_K : ALL_KNOBS,
                         OPT_ONLY_K : ''  # only the presence of this key,val pair is needed
                         }
@@ -136,7 +138,8 @@ def analyzeOptStats(compT, _ignore, compStats):
     
     # negative weight = we want to minimize this, positive weight = maximize this
     featureVector = [
-        ("instcount.TotalInsts", -1),
+        ("instcount.TotalInsts", -1.25),
+        ("instcount.TotalBlocks", -3),
         ("instcount.TotalFuncs", -100),
         ("instcount.NumStoreInst", -10),
         ("instcount.NumLoadInst", -20),
@@ -146,6 +149,7 @@ def analyzeOptStats(compT, _ignore, compStats):
         ("inline.NumInlined", 100),
         ("inline.NumCallsDeleted", 100),
         ("instsimplify.", 2),
+        ("adce.NumRemoved", 1),
         ("gvn.", 3),
         ("simplifycfg.", 3),
         ("loop-vectorize.LoopsVectorized", 10),
@@ -205,15 +209,110 @@ ALL_KNOBS = [
 # this causes opt to crash
 # 'localizer',
 
-# crashes
-# 'loop-interchange',
+# LLVM 6 (with asserts) crashes
+#     'loop-interchange',
+# here's the error:
+'''
+Assertion failed: (i < getNumSuccessors() && "Successor # out of range for Branch!"), function getSuccessor, file /Users/kavon/msr/tot-llvm/src/include/llvm/IR/Instructions.h, line 3057.
+0  opt                      0x000000010e78bd48 llvm::sys::PrintStackTrace(llvm::raw_ostream&) + 40
+1  opt                      0x000000010e78c446 SignalHandler(int) + 454
+2  libsystem_platform.dylib 0x00007fff89ab552a _sigtramp + 26
+3  opt                      0x000000010dbeb10c llvm::SimplifyCall(llvm::ImmutableCallSite, llvm::Value*, llvm::Use*, llvm::Use*, llvm::SimplifyQuery const&) + 812
+4  libsystem_c.dylib        0x00007fff936546df abort + 129
+5  libsystem_c.dylib        0x00007fff9361bdd8 basename + 0
+6  opt                      0x000000010e5a2f69 (anonymous namespace)::LoopInterchange::runOnFunction(llvm::Function&) + 8857
+7  opt                      0x000000010e1c70f3 llvm::FPPassManager::runOnFunction(llvm::Function&) + 547
+8  opt                      0x000000010e1c7353 llvm::FPPassManager::runOnModule(llvm::Module&) + 51
+9  opt                      0x000000010e1c789e llvm::legacy::PassManagerImpl::run(llvm::Module&) + 958
+10 opt                      0x000000010d8ac896 main + 10230
+11 libdyld.dylib            0x00007fff934d95ad start + 1
+Stack dump:
+0.	Program arguments: /Users/kavon/msr/tot-llvm/install/bin/opt -stats -stats-json -info-output-file ./programs/linpack/stats_2.json -disable-output -targetlibinfo -tti -tbaa -scoped-noalias -assumption-cache-tracker -profile-summary-info -forceattrs -inferattrs -mem2reg -lower-expect -sccp -reassociate -speculative-execution -ipsccp -domtree -prune-eh -sroa -postdomtree -slsr -globalopt -demanded-bits -barrier -memdep -simplifycfg -loop-sink -loops -loop-unswitch -loop-deletion -mldst-motion -block-freq -loop-accesses -instcombine -prune-eh -loop-distribute -slsr -speculative-execution -loop-sink -instcombine -memcpyopt -loop-vectorize -loop-unswitch -sccp -block-freq -prune-eh -float2int -elim-avail-extern -loop-interchange -loop-distribute -loop-reduce -branch-prob -lcssa-verification -lazy-branch-prob -jump-threading -lazy-value-info -globals-aa -argpromotion -lazy-value-info -ipsccp -loop-idiom -jump-threading -demanded-bits -lcssa -loop-idiom -ipsccp -tailcallelim -domtree -memdep -tailcallelim -aa -memdep -early-cse -ipsccp -ipsccp -basiccg -simplifycfg -block-freq -sroa -constmerge -loop-reduce -indvars -domtree -lcssa-verification -domtree -loop-simplify -loop-deletion -adce -functionattrs -instcombine -block-freq -demanded-bits -deadargelim -always-inline -deadargelim -loop-accesses -domtree -early-cse -inline -available-load-scan-limit=17 -bonus-inst-threshold=9 -early-ifcvt-limit=32 -jump-threading-implication-search-threshold=4 -licm-versioning-max-depth-threshold=1 -loop-interchange-threshold=2 -loop-unswitch-threshold=1838 -max-nested-scalar-reduction-interleave=5 -max-recurse-depth=2453 -max-speculation-depth=14 -max-uses-for-sinking=79 -memdep-block-scan-limit=275 -instcount ./programs/linpack/linpack.bc -o ./programs/linpack/linpack_2.bc 
+1.	Running pass 'Function Pass Manager' on module './programs/linpack/linpack.bc'.
+2.	Running pass 'Interchanges loops for cache reuse' on function '@main'
+make: *** [optimize] Abort trap: 6
+'''
 
+
+### crashes llvm 6 (with asserts)
 # 'loop-reduce'
-# 'nary-reassociate',
-# 'newgvn',
+# here's the error:
+'''
+0  opt                      0x0000000106614d48 llvm::sys::PrintStackTrace(llvm::raw_ostream&) + 40
+1  opt                      0x0000000106615446 SignalHandler(int) + 454
+2  libsystem_platform.dylib 0x00007fff89ab552a _sigtramp + 26
+3  libsystem_malloc.dylib   0x00007fff9185e154 small_malloc_from_free_list + 1200
+4  opt                      0x0000000105a5cf0a llvm::IVUsers::getExpr(llvm::IVStrideUse const&) const + 26
+5  opt                      0x0000000106452973 (anonymous namespace)::LSRInstance::LSRInstance(llvm::Loop*, llvm::IVUsers&, llvm::ScalarEvolution&, llvm::DominatorTree&, llvm::LoopInfo&, llvm::TargetTransformInfo const&) + 14419
+6  opt                      0x000000010644e185 ReduceLoopStrength(llvm::Loop*, llvm::IVUsers&, llvm::ScalarEvolution&, llvm::DominatorTree&, llvm::LoopInfo&, llvm::TargetTransformInfo const&) + 101
+7  opt                      0x000000010647431a (anonymous namespace)::LoopStrengthReduce::runOnLoop(llvm::Loop*, llvm::LPPassManager&) + 554
+8  opt                      0x0000000105ad8125 llvm::LPPassManager::runOnFunction(llvm::Function&) + 1189
+9  opt                      0x00000001060500f3 llvm::FPPassManager::runOnFunction(llvm::Function&) + 547
+10 opt                      0x0000000105a0ab80 (anonymous namespace)::CGPassManager::runOnModule(llvm::Module&) + 1552
+11 opt                      0x000000010605089e llvm::legacy::PassManagerImpl::run(llvm::Module&) + 958
+12 opt                      0x0000000105735896 main + 10230
+13 libdyld.dylib            0x00007fff934d95ad start + 1
+Stack dump:
+0.	Program arguments: /Users/kavon/msr/tot-llvm/install/bin/opt -stats -stats-json -info-output-file ./programs/linpack/stats_19.json -disable-output -targetlibinfo -tti -tbaa -scoped-noalias -assumption-cache-tracker -profile-summary-info -forceattrs -inferattrs -mem2reg -lower-expect -memdep -memcpyopt -argpromotion -speculative-execution -loop-deletion -argpromotion -lazy-value-info -basiccg -basicaa -aa -loops -loop-unroll -slsr -elim-avail-extern -elim-avail-extern -demanded-bits -lazy-branch-prob -gvn -slp-vectorizer -constmerge -loop-sink -postdomtree -barrier -aa -adce -slsr -lazy-branch-prob -constmerge -inline -sroa -constmerge -adce -libcalls-shrinkwrap -slp-vectorizer -functionattrs -dse -functionattrs -postdomtree -deadargelim -functionattrs -loop-rotate -loop-accesses -loop-distribute -gvn -early-cse -lcssa -loop-idiom -alignment-from-assumptions -slsr -licm -block-freq -sccp -inline -functionattrs -globalopt -alignment-from-assumptions -loop-vectorize -basicaa -loop-vectorize -simplifycfg -constmerge -aa -speculative-execution -loop-reduce -deadargelim -always-inline -lcssa-verification -argpromotion -loop-simplify -loop-idiom -inline -loop-distribute -speculative-execution -loop-simplify -memdep -instsimplify -always-inline -slp-vectorizer -float2int -elim-avail-extern -loop-sink -speculative-execution -loop-distribute -prune-eh -argpromotion -inline -deadargelim -instsimplify -loop-accesses -always-inline -block-freq -domtree -basiccg -loop-reduce -loop-reduce -reassociate -loop-accesses -loop-sink -slp-vectorizer -gvn -argpromotion -lcssa -available-load-scan-limit=10 -bonus-inst-threshold=8 -jump-threading-threshold=17 -loop-interchange-threshold=-5 -max-dependences=212 -max-recurse-depth=2138 -max-speculation-depth=30 -instcount ./programs/linpack/linpack.bc -o ./programs/linpack/linpack_19.bc 
+1.	Running pass 'CallGraph Pass Manager' on module './programs/linpack/linpack.bc'.
+2.	Running pass 'Loop Pass Manager' on function '@_Z9r8mat_genii'
+3.	Running pass 'Loop Strength Reduction' on basic block '%for.body4'
+make: *** [optimize] Segmentation fault: 11
+bash-3.2$ 
+'''
+
+
+# broken in LLVM 6 (with asserts) 'newgvn'
+# output:
+'''
+Assertion failed: (BeforeCC->isEquivalentTo(AfterCC) && "Value number changed after main loop completed!"), function verifyIterationSettled, file /Users/kavon/msr/tot-llvm/src/lib/Transforms/Scalar/NewGVN.cpp, line 3285.
+0  opt                      0x0000000105afad48 llvm::sys::PrintStackTrace(llvm::raw_ostream&) + 40
+1  opt                      0x0000000105afb446 SignalHandler(int) + 454
+2  libsystem_platform.dylib 0x00007fff89ab552a _sigtramp + 26
+3  libsystem_platform.dylib 0x00007fff5aff3ad8 _sigtramp + 3511936456
+4  libsystem_c.dylib        0x00007fff936546df abort + 129
+5  libsystem_c.dylib        0x00007fff9361bdd8 basename + 0
+6  opt                      0x00000001059905b7 (anonymous namespace)::NewGVN::runGVN() + 23335
+7  opt                      0x0000000105992c99 (anonymous namespace)::NewGVNLegacyPass::runOnFunction(llvm::Function&) + 601
+8  opt                      0x00000001055360f3 llvm::FPPassManager::runOnFunction(llvm::Function&) + 547
+9  opt                      0x0000000105536353 llvm::FPPassManager::runOnModule(llvm::Module&) + 51
+10 opt                      0x000000010553689e llvm::legacy::PassManagerImpl::run(llvm::Module&) + 958
+11 opt                      0x0000000104c1b896 main + 10230
+12 libdyld.dylib            0x00007fff934d95ad start + 1
+13 libdyld.dylib            0x0000000000000086 start + 1823632090
+Stack dump:
+0.	Program arguments: /Users/kavon/msr/tot-llvm/install/bin/opt -stats -stats-json -info-output-file ./programs/linpack/stats_22.json -disable-output -targetlibinfo -tti -tbaa -scoped-noalias -assumption-cache-tracker -profile-summary-info -forceattrs -inferattrs -mem2reg -lower-expect -loop-vectorize -loops -barrier -loop-idiom -functionattrs -elim-avail-extern -branch-prob -argpromotion -lcssa-verification -loop-distribute -globals-aa -loop-vectorize -block-freq -scalar-evolution -globalopt -domtree -instcombine -domtree -loop-unswitch -aa -block-freq -mldst-motion -prune-eh -loop-unroll -memdep -elim-avail-extern -block-freq -basicaa -strip-dead-prototypes -constmerge -basicaa -loops -lcssa-verification -loop-rotate -bdce -float2int -lazy-value-info -prune-eh -float2int -early-cse -newgvn -basiccg -instcombine -block-freq -loops -dse -speculative-execution -domtree -tailcallelim -loop-rotate -functionattrs -memcpyopt -inline -functionattrs -loop-unswitch -loop-rotate -loop-vectorize -basiccg -scalar-evolution -licm -loop-sink -alignment-from-assumptions -instsimplify -instsimplify -ipsccp -tailcallelim -loop-distribute -lazy-block-freq -strip-dead-prototypes -elim-avail-extern -memcpyopt -bdce -globaldce -inline -constmerge -aa -mldst-motion -branch-prob -inline -scalar-evolution -loop-unswitch -early-cse -lcssa -ipsccp -memdep -deadargelim -newgvn -aa -loop-rotate -instcombine -globaldce -tailcallelim -correlated-propagation -demanded-bits -functionattrs -nary-reassociate -licm -simplifycfg -instsimplify -loop-rotate -loop-distribute -available-load-scan-limit=4 -bonus-inst-threshold=1 -early-ifcvt-limit=31 -jump-threading-implication-search-threshold=5 -licm-max-num-uses-traversed=24 -loop-load-elimination-scev-check-threshold=12 -loop-unswitch-threshold=1711 -max-dependences=300 -max-recurse-depth=1756 -max-speculation-depth=14 -max-uses-for-sinking=21 -memdep-block-number-limit=1779 -memdep-block-scan-limit=249 -instcount ./programs/linpack/linpack.bc -o ./programs/linpack/linpack_22.bc 
+1.	Running pass 'Function Pass Manager' on module './programs/linpack/linpack.bc'.
+2.	Running pass 'Global Value Numbering' on function '@_Z5dgeslPdiiPiS_i'
+make: *** [optimize] Abort trap: 6
+
+'''
+
+# crashes in llvm6 (with asserts)
+#   early-cse-memssa  (in default ordering!)
+# my hunch was that it requires -memoryssa to be run before it, but that doesn't fix it.
+'''
+Assertion failed: (AnalysisPass && "Expected analysis pass to exist."), function setLastUser, file /Users/kavon/msr/tot-llvm/src/lib/IR/LegacyPassManager.cpp, line 523.
+0  opt                      0x000000010f4a5d48 llvm::sys::PrintStackTrace(llvm::raw_ostream&) + 40
+1  opt                      0x000000010f4a6446 SignalHandler(int) + 454
+2  libsystem_platform.dylib 0x00007fff89ab552a _sigtramp + 26
+3  libsystem_platform.dylib 0x00007fff638e05c8 _sigtramp + 3655512248
+4  libsystem_c.dylib        0x00007fff936546df abort + 129
+5  libsystem_c.dylib        0x00007fff9361bdd8 basename + 0
+6  opt                      0x000000010eeda34a llvm::PMTopLevelManager::setLastUser(llvm::ArrayRef<llvm::Pass*>, llvm::Pass*) + 1786
+7  opt                      0x000000010eedeac2 llvm::PMDataManager::add(llvm::Pass*, bool) + 722
+8  opt                      0x000000010eedb644 llvm::PMTopLevelManager::schedulePass(llvm::Pass*) + 2724
+9  opt                      0x000000010e5c608d main + 8173
+10 libdyld.dylib            0x00007fff934d95ad start + 1
+Stack dump:
+0.	Program arguments: /Users/kavon/msr/tot-llvm/install/bin/opt -stats -stats-json -info-output-file ./programs/linpack/stats_256.json -disable-output -targetlibinfo -tti -tbaa -scoped-noalias -assumption-cache-tracker -profile-summary-info -forceattrs -inferattrs -mem2reg -lower-expect -memdep -inline -globaldce -functionattrs -block-freq -basicaa -alignment-from-assumptions -elim-avail-extern -loop-accesses -barrier -scalar-evolution -argpromotion -float2int -loop-distribute -loop-sink -loop-idiom -adce -gvn -functionattrs -lcssa -simplifycfg -sccp -functionattrs -loop-unroll -loops -memdep -aa -div-rem-pairs -basiccg -sccp -jump-threading -loop-idiom -jump-threading -early-cse-memssa -lazy-block-freq -lazy-value-info -early-cse-memssa -loop-vectorize -basicaa -bdce -lcssa-verification -loop-unroll -adce -sroa -instsimplify -loop-rotate -scalar-evolution -globals-aa -basiccg -basiccg -loop-idiom -argpromotion -basiccg -globalopt -branch-prob -aa -gvn -elim-avail-extern -sroa -prune-eh -always-inline -prune-eh -adce -lazy-block-freq -loop-sink -early-cse-memssa -indvars -loop-accesses -basiccg -sroa -licm -indvars -sroa -deadargelim -prune-eh -instsimplify -postdomtree -alignment-from-assumptions -slp-vectorizer -indvars -indvars -float2int -float2int -slsr -div-rem-pairs -instsimplify -simplifycfg -sroa -prune-eh -nary-reassociate -constmerge -scalar-evolution -inline -ipsccp -lazy-value-info -scalar-evolution -inline -block-freq -postdomtree -available-load-scan-limit=6 -early-ifcvt-limit=17 -inline-threshold=29884 -loop-distribute-scev-check-threshold=74 -loop-interchange-threshold=3 -loop-load-elimination-scev-check-threshold=21 -max-dependences=173 -max-num-inline-blocks=11 -max-speculation-depth=20 -max-uses-for-sinking=58 -memdep-block-number-limit=1803 -memdep-block-scan-limit=198 -instcount ./programs/linpack/linpack.bc -o ./programs/linpack/linpack_256.bc 
+make: *** [optimize] Abort trap: 6
+'''
+
+
+
 # 'separate-const-offset-from-gep',
 # 'simple-loop-unswitch',
-# 'slsr',
     # structureizecfg breaks invokes in tsp-ga:
 #     Block containing LandingPadInst must be jumped to only by the unwind edge of an invoke.
 #   %300 = landingpad { i8*, i32 }
@@ -234,13 +333,17 @@ ALL_PASSES = [
     'bdce',
     'block-freq',
     'branch-prob',
+    'called-value-propagation',
+    'callsite-splitting',
     'constmerge',
     'correlated-propagation',
     'deadargelim',
     'demanded-bits',
+    'div-rem-pairs',
     'domtree',
     'dse',
     'early-cse',
+    # 'early-cse-memssa',   # crashes LLVM 6, in default order.
     'elim-avail-extern',
     'float2int',
     'functionattrs',
@@ -254,7 +357,6 @@ ALL_PASSES = [
     'instsimplify',
     'ipsccp',
     'jump-threading',
-    # 'latesimplifycfg',   # doesn't exist in LLVM 6
     'lazy-block-freq',
     'lazy-branch-prob',
     'lazy-value-info',
@@ -266,7 +368,9 @@ ALL_PASSES = [
     'loop-deletion',
     'loop-distribute',
     'loop-idiom',
+    # 'loop-interchange',   # CRASHES LLVM 6
     'loop-load-elim',
+    # 'loop-reduce',        # CRASHES LLVM 6
     'loop-rotate',
     'loop-simplify',
     'loop-sink',
@@ -276,17 +380,21 @@ ALL_PASSES = [
     'loops',
     'memcpyopt',
     'memdep',
+    'memoryssa',
     'mldst-motion',
-    # 'opt-remark-emitter',
-    # 'pgo-memop-opt',
+    'nary-reassociate',
+    # 'newgvn',             # CRASHES LLVM 6
+    # 'opt-remark-emitter',  # seems pointless
+    # 'pgo-memop-opt',       # seems pointless
     'postdomtree',
     'prune-eh',
     'reassociate',
-    # 'rpo-functionattrs',   # has a bug in LLVM 6
+    # 'rpo-functionattrs',   # CRASHES LLVM 6, in default order right now!
     'scalar-evolution',
     'sccp',
     'simplifycfg',
     'slp-vectorizer',
+    'slsr',
     'speculative-execution',
     'sroa',
     'strip-dead-prototypes',
