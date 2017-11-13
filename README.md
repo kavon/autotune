@@ -38,13 +38,13 @@ Run `./src/tune_llvm.py -h` for more options.
 #### tuning without fully compiling the program
 
 When the tuner is set to `optonly` mode, it will only run the `optimize` and `opt_stats`
-targets of the makefile.
+targets of the Makefile.
 In this mode, the `optimize` phase will be expected to save the optimization statistics 
-in a JSON format, and the `opt_stats` should output the JSON data to `stdout`. 
-Optimization statistics can be saved by LLVM if you pass the following flags to `opt`:
+in a JSON format, and the `opt_stats` target should output the JSON data to `stdout`. 
+Optimization statistics can be saved by LLVM like so:
 
 ```
--stats -stats-json -info-output-file <filename>
+opt -disable-output -stats -stats-json -info-output-file <json file> <passes> <ir file> 
 ```
 
 Note that you must build LLVM with either `LLVM_ENABLE_STATS` or Assertions enabled.
