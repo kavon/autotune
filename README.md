@@ -35,6 +35,17 @@ tuned, but it's not easy to describe what it is here.
 
 Run `./src/tune_llvm.py -h` for more options.
 
-#### Optimizing for Pass Effectiveness
+#### tuning without fully compiling the program
 
-This requires building LLVM with `LLVM_ENABLE_STATS` or assertions enabled. Still a TODO.
+When the tuner is set to `optonly` mode, it will only run the `optimize` and `opt_stats`
+targets of the makefile.
+In this mode, the `optimize` phase will be expected to save the optimization statistics 
+in a JSON format, and the `opt_stats` should output the JSON data to `stdout`. 
+Optimization statistics can be saved by LLVM if you pass the following flags to `opt`:
+
+```
+-stats -stats-json -info-output-file <filename>
+```
+
+Note that you must build LLVM with either `LLVM_ENABLE_STATS` or Assertions enabled.
+A Release build is reccomended to speed up tuning.
