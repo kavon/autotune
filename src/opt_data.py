@@ -96,21 +96,62 @@ def analyzeOptStats(compT, _ignore, compStats):
     # so there should be less to do at runtime.
     # machine learning to assign weights would be a lot fancier than intution :)
     
-    # actually, i think running -instcount at the end is a good indicator
-    # of how well optimized the program is. we can guide the optimizations
-    # by picking the kinds of instructions (and other properties of the program)
-    # we want to change
+    # here are some statistics from instcount one could use:
+    '''
+    "instcount.NumAddInst": 100,
+	"instcount.NumAllocaInst": 3,
+	"instcount.NumBitCastInst": 14,
+	"instcount.NumBrInst": 201,
+	"instcount.NumCallInst": 74,
+	"instcount.NumFAddInst": 21,
+	"instcount.NumFCmpInst": 8,
+	"instcount.NumFDivInst": 11,
+	"instcount.NumFMulInst": 28,
+	"instcount.NumFSubInst": 7,
+	"instcount.NumGetElementPtrInst": 157,
+	"instcount.NumICmpInst": 54,
+	"instcount.NumLoadInst": 92,
+	"instcount.NumMulInst": 46,
+	"instcount.NumPHIInst": 67,
+	"instcount.NumRetInst": 14,
+	"instcount.NumSDivInst": 3,
+	"instcount.NumSExtInst": 121,
+	"instcount.NumSIToFPInst": 4,
+	"instcount.NumSRemInst": 4,
+	"instcount.NumStoreInst": 47,
+	"instcount.NumSubInst": 75,
+	"instcount.NumUIToFPInst": 1,
+	"instcount.TotalBlocks": 215,
+	"instcount.TotalFuncs": 14,
+	"instcount.TotalInsts": 1152,
+    '''
     
     # TODO probably worth making a multi-level dictionary
     # to handle pass.* and pass.specificStat weighting.
+    
+    # TODO probably worth applying linear regression or some other machine learning
+    # technique to find relevant features and their weights so we can estimate the
+    # level of "improvement" (running time) in a systematic way, instead of these
+    # heurstics.
+    
+    # negative weight = we want to minimize this, positive weight = maximize this
     featureVector = [
-        ("early-cse.", 1),
-        ("instcombine.", 1),
+        ("instcount.TotalInsts", -1),
+        ("instcount.TotalFuncs", -100),
+        ("instcount.NumStoreInst", -10),
+        ("instcount.NumLoadInst", -20),
+        ("early-cse.NumSimplify", 2),
+        ("early-cse.", 3),
+        ("instcombine.", 2),
         ("inline.NumInlined", 100),
-        ("inline.NumCallsDeleted", 1000),
-        ("instsimplify.", 1),
-        ("gvn.", 1),
-        ("simplifycfg.", 2)
+        ("inline.NumCallsDeleted", 100),
+        ("instsimplify.", 2),
+        ("gvn.", 3),
+        ("simplifycfg.", 3),
+        ("loop-vectorize.LoopsVectorized", 10),
+        ("licm.NumHoisted", 10),
+        ("loop-delete.NumDeleted", 10),
+        ("loop-unroll.NumUnrolled", 1)
     ]
     
     count = 0
@@ -241,7 +282,7 @@ ALL_PASSES = [
     'postdomtree',
     'prune-eh',
     'reassociate',
-    'rpo-functionattrs',
+    # 'rpo-functionattrs',   # has a bug in LLVM 6
     'scalar-evolution',
     'sccp',
     'simplifycfg',
