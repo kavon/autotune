@@ -138,24 +138,24 @@ def analyzeOptStats(compT, _ignore, compStats):
     
     # negative weight = we want to minimize this, positive weight = maximize this
     featureVector = [
-        ("instcount.TotalInsts", -1.25),
-        ("instcount.TotalBlocks", -3),
+        ("instcount.TotalInsts", -0.75),
+        ("instcount.TotalBlocks", -2),
         ("instcount.TotalFuncs", -100),
         ("instcount.NumStoreInst", -10),
         ("instcount.NumLoadInst", -20),
         ("early-cse.NumSimplify", 2),
         ("early-cse.", 3),
         ("instcombine.", 2),
-        ("inline.NumInlined", 100),
-        ("inline.NumCallsDeleted", 100),
+        ("inline.NumInlined", 500),
+        ("inline.NumCallsDeleted", 1000),
         ("instsimplify.", 2),
-        ("adce.NumRemoved", 1),
+        ("adce.NumRemoved", 2),
         ("gvn.", 3),
         ("simplifycfg.", 3),
-        ("loop-vectorize.LoopsVectorized", 10),
-        ("licm.NumHoisted", 10),
-        ("loop-delete.NumDeleted", 10),
-        ("loop-unroll.NumUnrolled", 1)
+        ("loop-vectorize.LoopsVectorized", 100),
+        ("licm.NumHoisted", 100),
+        ("loop-delete.NumDeleted", 100),
+        ("loop-unroll.NumUnrolled", 10)
     ]
     
     count = 0

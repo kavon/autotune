@@ -9,7 +9,7 @@
 LLVM_PATH=/Users/kavon/msr/tot-llvm/install/bin
 GHC_ROOT=/Users/kavon/msr/alt-ghc
 LOC=./out
-PROGRAM=real/lift
+PROGRAM=imaginary/integrate
 
 # when comparing to clang -Ox, make sure this matches up so codegen is the same.
 LLC_OPT=-O3
