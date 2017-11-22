@@ -21,7 +21,7 @@ import opt_data
 
 # TODO: don't hardcode some of these
 OPT_LVL = 'optonly'
-PROG = 'linpack'
+PROG = 'nofib'
 MAKEFILE = './programs/' + PROG + '/tune.mk'
 MIN_TRIALS = 2
 MAX_TRIALS = 50
