@@ -26,11 +26,11 @@ RESOURCE=${LOC}/initial
 # It is only executed once at the start of the tuning.
 bitcode:
 	pushd ${NOFIB_ROOT} ;\
-	make clean ;\
 	make boot ;\
 	pushd ${PROGRAM} ;\
-	make NoFibRuns=1 HC=${GHC} EXTRA_HC_OPTS="-fllvm -keep-llvm-files"
+	make NoFibRuns=1 HC=${GHC} EXTRA_HC_OPTS="-fforce-recomp -fllvm -keep-llvm-files"
 	${LLVM_PATH}/llvm-link ${NOFIB_ROOT}/${PROGRAM}/*.ll -o ${RESOURCE}.bc
+	pushd ${NOFIB_ROOT}/${PROGRAM} ; make clean
 
 
 # Target Inputs:

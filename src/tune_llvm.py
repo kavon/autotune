@@ -53,7 +53,9 @@ class OptFlagsTuner(MeasurementInterface):
     
     # build bitcode file
     self.make(MAKEFILE, "clean")
+    print "Building initial bitcode ..."
     self.make(MAKEFILE, "bitcode")
+    print "done!"
     
 
   def manipulator(self):
