@@ -14,6 +14,7 @@ from opentuner.search.manipulator import (ConfigurationManipulator,
 from opentuner.search.objective import SearchObjective
 
 import numpy as np
+import sys
 
 import opt_data
 
@@ -31,6 +32,13 @@ def meetsError(samples, mean):
     sem = np.std(samples) / np.sqrt(len(samples))
     pct = (sem / mean) * 100.0
     return pct <= MAX_ERR
+
+# input is a float in [0, 100] representing a precentage
+def update_progress(progress):
+    barLen = 20
+    div = 100 / barLen
+    sys.stdout.write('\r[{0: <{barLen}}] {1:.2f}% complete'.format('#'*(int(progress/div)), progress, barLen=barLen))
+    sys.stdout.flush()
 
 
 class OptFlagsTuner(MeasurementInterface):
@@ -116,7 +124,6 @@ class OptFlagsTuner(MeasurementInterface):
     """
     
     passes = self.build_options(cfg)
-    passes = "\"" + passes + "\""
     
     build_res = None
     opt_res = None
@@ -132,8 +139,11 @@ class OptFlagsTuner(MeasurementInterface):
         print "---------------------------------------------"
         print inst
         # ensure we made it all the way through
-        print ("\n\nCrash while compiling this config:\nID =  " + str(id) + "\npasses = " + passes + "\n") 
-        assert opt_res != None, "died during OPTIMIZE"
+        if opt_res == None:
+            print "died during OPTIMIZE... trying to reduce the pass configuration."
+            self.auto_reduce(passes, id, "optimize")
+            assert False, "done."
+            
         assert build_res != None, "died during LINK"
         assert False, "Something else went wrong!!"
         
@@ -189,6 +199,46 @@ class OptFlagsTuner(MeasurementInterface):
     print msg
     self.make(MAKEFILE, "clean")
     
+  def auto_reduce(self, passStr, id, target):
+      print "Auto-reduce Starting..."
+      
+      originalPasses = passStr.split(' ')
+      passes = originalPasses[:]
+      idx = 0
+      while idx < len(passes):
+          
+          print ("\n Update for ID = " + str(id))
+          update_progress(100.0 * (float(idx + 1) / len(passes)))
+          print "\n\n"
+          
+          # take a pass out and see if it crashes
+          excluded = passes.pop(idx)
+          
+          res = None
+          try:
+              asStr = ' '.join(passes)
+              res = self.make(MAKEFILE, "optimize", ID=id, PASSES=asStr, suppressFailure=False)
+              assert res != None
+          except:
+              ###
+              # it still fails without this pass, so its irrelevant.
+              # leave it off and keep going.
+              continue
+              
+          ### 
+          # it no longer fails when we take the pass out, so this pass is part of the problem. 
+          # we put it back in the sequence and continue trying to look for
+          # irrelevant passes.
+          passes.insert(idx, excluded)
+          idx += 1
+      
+      if passes == originalPasses:
+          print "\nI was unable to reduce the pass sequence any further..."
+      
+      print "\nHere is the smallest failure case I've found:"
+      asStr = ' '.join(passes)
+      self.make(MAKEFILE, "optimize", ID=id, PASSES=asStr, suppressFailure=False)
+    
   
   def get_runtime(self, id):
       '''
@@ -226,19 +276,19 @@ class OptFlagsTuner(MeasurementInterface):
       return (avg_runtime, run_res)
 
   
-  def make(self, makefile, target, ID=None, PASSES=None):
+  def make(self, makefile, target, ID=None, PASSES=None, suppressFailure=False):
     cmd = ''
 
     if ID:
         cmd += 'ID={0} '.format(ID)
 
     if PASSES:
-      cmd += 'PASSES={0} '.format(PASSES)
+      cmd += 'PASSES=\"{0}\" '.format(PASSES)
 
     cmd += 'make -f {0} {1}'.format(makefile, target)
 
     result = self.call_program(cmd)
-    if result['returncode'] != 0:
+    if result['returncode'] != 0 and not suppressFailure:
         print ("autotune error executing: \n" + cmd)
         assert False, "make command returned non-zero exit code!!"
         
