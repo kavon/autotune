@@ -15,20 +15,32 @@ from opentuner.search.objective import SearchObjective
 
 import numpy as np
 import sys
+import argparse
+import logging
 
 import opt_data
+
+log = logging.getLogger('llvmpasses')
+
+argparser = argparse.ArgumentParser(parents=opentuner.argparsers())
+
+argparser.add_argument("makefile", help="Path to the makefile to for tuning", type=str)
+
+argparser.add_argument('--min-trials', type=int, default=2,
+help='minimum number of times a compiled program is run.')
+
+argparser.add_argument('--max-trials', type=int, default=20,
+help='maxiumum number of times a compiled program is run.')
+
+argparser.add_argument('--max-error', type=float, default=2.0,
+help='maxiumum percentage of standard error for average program running time.')
 
 # NOTE: you have to use one consistent clang/opt/llc build
 
 # TODO: don't hardcode some of these
 OPT_LVL = 'optonly'
-PROG = 'nofib'
-MAKEFILE = './programs/' + PROG + '/tune.mk'
-MIN_TRIALS = 2
-MAX_TRIALS = 50
-MAX_ERR = 2.0  # provide a precentage. 1.2% = 1.2
 
-def meetsError(samples, mean):
+def meetsError(samples, mean, MAX_ERR):
     sem = np.std(samples) / np.sqrt(len(samples))
     pct = (sem / mean) * 100.0
     return pct <= MAX_ERR
@@ -44,7 +56,7 @@ def update_progress(progress):
 class OptFlagsTuner(MeasurementInterface):
     
   def __init__(self, *pargs, **kwargs):
-    super(OptFlagsTuner, self).__init__(program_name=PROG, *pargs,
+    super(OptFlagsTuner, self).__init__(program_name="program_name", *pargs,
                                         **kwargs)
     self.parallel_compile = True
     
@@ -60,9 +72,9 @@ class OptFlagsTuner(MeasurementInterface):
     self.knobs = problem_setup[opt_data.ALL_KNOBS_K]
     
     # build bitcode file
-    self.make(MAKEFILE, "clean")
+    self.make("clean")
     print "Building initial bitcode ..."
-    self.make(MAKEFILE, "bitcode")
+    self.make("bitcode")
     print "done!"
     
 
@@ -129,11 +141,11 @@ class OptFlagsTuner(MeasurementInterface):
     opt_res = None
     try:
         # optimize
-        opt_res = self.make(MAKEFILE, "optimize", ID=id, PASSES=passes)
+        opt_res = self.make("optimize", ID=id, PASSES=passes)
         
         if not self.optOnly:
             # build executable
-            build_res = self.make(MAKEFILE, "link", ID=id)
+            build_res = self.make("link", ID=id)
         
     except Exception as inst:
         print "---------------------------------------------"
@@ -167,7 +179,7 @@ class OptFlagsTuner(MeasurementInterface):
         avg_runtime = run_time
     
     # grab the optimization stats
-    stats_res = self.make(MAKEFILE, "opt_stats", ID=id)
+    stats_res = self.make("opt_stats", ID=id)
     stats_out = stats_res['stdout']
     
     # apply the objective function
@@ -175,7 +187,7 @@ class OptFlagsTuner(MeasurementInterface):
     total_time = self.objectiveFun(compile_time, avg_runtime, stats_out)
     
     # clean up everything
-    self.make(MAKEFILE, "selfclean", ID=id)
+    self.make("selfclean", ID=id)
     
     return Result(time=total_time)
 
@@ -195,9 +207,9 @@ class OptFlagsTuner(MeasurementInterface):
     # print "Optimal passes written to " + outfile + ":", configuration.data
     # self.manipulator().save_to_file(configuration.data, outfile)
     msg = "Tuned on program {0}, with priority {1}. \nBest pass ordering found:\n{2}".format(
-            PROG, OPT_LVL, self.build_options(configuration.data))
+            self.args.makefile, OPT_LVL, self.build_options(configuration.data))
     print msg
-    self.make(MAKEFILE, "clean")
+    self.make("clean")
     
   def auto_reduce(self, passStr, id, target):
       print "Auto-reduce Starting..."
@@ -217,7 +229,7 @@ class OptFlagsTuner(MeasurementInterface):
           res = None
           try:
               asStr = ' '.join(passes)
-              res = self.make(MAKEFILE, "optimize", ID=id, PASSES=asStr, suppressFailure=False)
+              res = self.make("optimize", ID=id, PASSES=asStr, suppressFailure=False)
               assert res != None
           except:
               ###
@@ -237,7 +249,7 @@ class OptFlagsTuner(MeasurementInterface):
       
       print "\nHere is the smallest failure case I've found:"
       asStr = ' '.join(passes)
-      self.make(MAKEFILE, "optimize", ID=id, PASSES=asStr, suppressFailure=False)
+      self.make("optimize", ID=id, PASSES=asStr, suppressFailure=False)
     
   
   def get_runtime(self, id):
@@ -248,12 +260,14 @@ class OptFlagsTuner(MeasurementInterface):
       avg_runtime = None
       run_res = None
       
-      assert MIN_TRIALS > 1, "bogus mininum"
-      assert MIN_TRIALS < MAX_TRIALS, "bogus number of trials"
+      min_trials = self.args.min_trials
+      max_trials = self.args.max_trials
+      assert min_trials > 1, "bogus mininum"
+      assert min_trials < max_trials, "bogus number of trials"
       
-      for trial in xrange(MAX_TRIALS):
+      for trial in xrange(max_trials):
           try:
-              run_res = self.make(MAKEFILE, "run", ID=id)
+              run_res = self.make("run", ID=id)
           except Exception as inst:
               print "---------------------------------------------"
               print inst
@@ -264,7 +278,8 @@ class OptFlagsTuner(MeasurementInterface):
           time = run_res['time']
           run_times.append(time)
           mean = np.mean(run_times)
-          if trial >= (MIN_TRIALS-1) and meetsError(run_times, mean):
+          if (trial >= (min_trials-1) 
+               and meetsError(run_times, mean, self.args.max_error)):
               # accept this mean
               avg_runtime = mean
               break
@@ -276,7 +291,8 @@ class OptFlagsTuner(MeasurementInterface):
       return (avg_runtime, run_res)
 
   
-  def make(self, makefile, target, ID=None, PASSES=None, suppressFailure=False):
+  def make(self, target, ID=None, PASSES=None, suppressFailure=False):
+    makefile = self.args.makefile
     cmd = ''
 
     if ID:
@@ -296,5 +312,6 @@ class OptFlagsTuner(MeasurementInterface):
 
 
 if __name__ == '__main__':
-  argparser = opentuner.default_argparser()
-  OptFlagsTuner.main(argparser.parse_args())
+  opentuner.init_logging()
+  args = argparser.parse_args()
+  OptFlagsTuner.main(args)
